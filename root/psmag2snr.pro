@@ -14,8 +14,8 @@ function psmag2snr, mag, band, ast_err = ast_err
   ast_floor = .01                           ;- astrometric error floor, in arcsec
 
 
-  print, f0 * area / 1d9 * frac_flux, format='(5(f0.2, 2x))'
-  print, sky * area *  sky_area, format='(5(f0.2, 2x))'
+;  print, f0 * area / 1d9 * frac_flux, format='(5(f0.2, 2x))'
+;  print, sky * area *  sky_area, format='(5(f0.2, 2x))'
 
 
   sky_flux = sky[band] * sky_area * area * time[band]
