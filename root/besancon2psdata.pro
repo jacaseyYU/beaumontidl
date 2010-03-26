@@ -1,6 +1,7 @@
 function besancon2psdata, besancon, optimistic = optimistic, $
                           av = av, cut = cut, $
-                          addnoise = addnoise, fix_distance = fix_distance
+                          addnoise = addnoise, fix_distance = fix_distance, $
+                          old_noise = old_noise
   compile_opt idl2
   common besancon2psdata_random, seed
 
@@ -85,7 +86,10 @@ function besancon2psdata, besancon, optimistic = optimistic, $
 
   ;- add in reddening
   if keyword_set(av) then begin
-     av = besancon.dist * .7                 ;- mags of Av extinction
+     ;- say av is .7 mag /kpc in a disk of height 300 pc (thin disk)
+     length = besancon.dist < (.3 / sin(besancon.b * !dtor))
+
+     av = length * .7                 ;- mags of Av extinction
      if keyword_set(fix_distance) then av = av * 0 + .07
      ps_lam_inv = 1/[.484, .621, .754, .869, .979] ;- 1/eff lambda. Dupuy
      ;- reddening from Cardelli Clayton Mathis 89
@@ -118,8 +122,14 @@ function besancon2psdata, besancon, optimistic = optimistic, $
   if badct ne 0 then flux[bad] = !values.f_nan
 
   ;- add astrometry noise
+  if ~keyword_set(old_noise) then begin
+     gast = psmag2error(g, g * 0 + 0) & rast = psmag2error(r, r * 0 + 1)
+     iast = psmag2error(i, i * 0 + 2) & zast = psmag2error(z, z * 0 + 3)
+     yast = psmag2error(y, y * 0 + 4)
+  endif
+
   ast_err = transpose([[gast],[rast],[iast],[zast],[yast]])
-  ast_err *= sqrt(5. / n_epoch)
+  ast_err *= sqrt(1D / n_epoch)
   nobs = total(finite(ast_err), 1)
   assert, max(nobs) eq 5
   if badct ne 0 then ast_err[bad] = !values.f_nan
@@ -131,9 +141,10 @@ function besancon2psdata, besancon, optimistic = optimistic, $
   
   assert, n_elements(ast_err) eq n_elements(besancon)
   
-  pi_err = ast_err
+  pi_err = ast_err * 1.33 ;- 1.33 factor derived from mc_par.pro
+  mu_err = ast_err * 3.5 / baseline * 1d3 ;- in mas. 3.5 from mc_par.pro
   if keyword_set(addnoise) then pi += pi_noise * pi_err ;- in arcsec
-  mu_err = pi_err / baseline * 1d3 ;- in mas
+;  mu_err = pi_err / baseline * 1d3 ;- in mas
   mux = besancon.mux * 10D + mu_err * mu_noise[0,*] * (keyword_set(addnoise) ? 0 : 1)
   muy = besancon.muy * 10D + mu_err * mu_noise[1,*] * (keyword_set(addnoise) ? 0 : 1)
   if keyword_set(fix_distance) then begin

@@ -1,12 +1,18 @@
 ;+ run fit_pmpar many times, empirically find distribution of parallax
 ;and pm. compare to estimated uncertainties
+;
+; RESULTS
+;  parallax error scales with (1D) position error as
+;   dpi = 1.33 dpos * sqrt(1 / nobs)
+;   dpm = 3.5  dpos * sqrt(1 / nobs) * 1/tbase (yrs)
+;   dpi depends on dec. 
 pro mc_par
 
-  nobs = 10D 
+  nobs = 100
   baseline = 4D
-  ra = ten(6, 52, 56.8) * 15
+  ra = ten(2, 52, 56.8) * 15
   dec = ten(0, -24, 17.9)
-  tbase = 3.5 * 365.25
+  tbase = 365.25
   niter = 10000
 
   j2000 = 2451545.0D
@@ -29,17 +35,17 @@ pro mc_par
      fits[i] = fit_pmpar(jd, ravec, decvec, noisevec, noisevec)
      dpi[i] = sqrt(fits[i].covar[4,4])
   endfor
-  plot, noise * 36d5, dpi
+  plot, noise * 36d5, dpi, xtit='Positional error (mas)', $
+        ytit = 'Parallax /pm error (mas)'
 ;  oplot, minmax(noise/noise[0]), minmax(noise/noise[0]), color = fsc_color('red')
-  a = linfit(noise * 36d5, dpi) & print, a
-  b = linfit(noise * 36d5, sqrt(fits.covar[1,1])) & print, b
+  a = linfit(noise * 36d5, dpi) & print, a 
+  b = linfit(noise * 36d5, sqrt(fits.covar[1,1])) & print, b 
   b = linfit(noise * 36d5, sqrt(fits.covar[3,3])) & print, b
-  
-  print, 1.333 / sqrt(nobs), 3.43 / sqrt(nobs) / baseline
+  oplot, noise * 36d5, sqrt(fits.covar[1,1]), color = fsc_color('red')
+  return
+
   oplot, noise * 36d5, noise / sqrt(nobs - 3) * sqrt(3 / 2.) * 36d5, color = fsc_color('red')
   ;return
-  print, mean(dpi), noise / sqrt(nobs) * sqrt(5) / sqrt(2) * 36d5
-  print, mean(dpi), stdev(dpi)
   h = histogram(fits.ura / sqrt(fits.covar[1,1]), loc = loc, nbins = 100)
   plot, loc, 1D * h / (loc[1] - loc[0]) / total(h), psym = 10
   oplot, loc, 1 / sqrt(2 * !pi) * exp(-loc^2 / 2), color = fsc_color('green')
