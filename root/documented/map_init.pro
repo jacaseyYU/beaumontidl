@@ -1,6 +1,7 @@
 ;+
 ; PURPOSE:
-;  This function creates a blank image and fits header
+;  This function creates a blank image and fits header, based on input
+;  parameters describing the desired image size and orientation.
 ;
 ; KEYWORD PARAMETERS:
 ;  center: A 2 element array specifying the sky location of the center

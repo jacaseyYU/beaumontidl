@@ -1,3 +1,29 @@
+;-
+; PURPOSE:
+;  Converts data read in from a besancon catalog into pan-starrs
+;  observations
+;
+; INPUTS:
+;  besancon: An array of besancon entry structures. This is created by
+;            read_besancon.pro
+;
+; KEYWORD PARAMETERS: 
+;  optimistic: Some of the synthetic PS magnitude tables are missing
+;              data. If /optimistic is set, then the astrometric
+;              precision will be adjusted assuming that these data
+;              exist.
+;  av: Set to include reddening
+;  cut: Set to cull the output (and input!) catalogs of objects which
+;       are saturated or not detected in a single epoch.
+;  addnoise: Normally, the 'true' quantities (parallax, flux, pm) are
+;            returned output, with their associated uncertainties. Set
+;            /addnoise to add random errors to the observations
+;  fix_distance: If set then all objects will be adjusted to 100 pc
+;  old_noise: If set, use the old error estimation scheme (e.g. before
+;             I started messing around with MC noise estimation) e
+; OUTPUT:
+;  An array of psdata structures, one for each observation
+;-
 function besancon2psdata, besancon, optimistic = optimistic, $
                           av = av, cut = cut, $
                           addnoise = addnoise, fix_distance = fix_distance, $
@@ -140,13 +166,21 @@ function besancon2psdata, besancon, optimistic = optimistic, $
   endif
   
   assert, n_elements(ast_err) eq n_elements(besancon)
+
+  if keyword_set(old_noise) then begin
+     pi_err = ast_err * sqrt(5) ;- in arcsec
+     mu_err = ast_err * sqrt(5) / baseline * 1d3 ;- in mas
+  endif else begin
+     pi_err = ast_err * 1.33              ;- 1.33 factor derived from mc_par.pro
+     mu_err = ast_err * 3.5 / baseline * 1d3 ;- in mas. 3.5 from mc_par.pro
+  endelse
   
-  pi_err = ast_err * 1.33 ;- 1.33 factor derived from mc_par.pro
-  mu_err = ast_err * 3.5 / baseline * 1d3 ;- in mas. 3.5 from mc_par.pro
   if keyword_set(addnoise) then pi += pi_noise * pi_err ;- in arcsec
-;  mu_err = pi_err / baseline * 1d3 ;- in mas
-  mux = besancon.mux * 10D + mu_err * mu_noise[0,*] * (keyword_set(addnoise) ? 0 : 1)
-  muy = besancon.muy * 10D + mu_err * mu_noise[1,*] * (keyword_set(addnoise) ? 0 : 1)
+  mux = besancon.mux * 10D + $
+        mu_err * mu_noise[0,*] * (keyword_set(addnoise) ? 0 : 1)
+  muy = besancon.muy * 10D + $
+        mu_err * mu_noise[1,*] * (keyword_set(addnoise) ? 0 : 1)
+  
   if keyword_set(fix_distance) then begin
      mux *= (besancon.dist / .1)
      muy *= (besancon.dist / .1)
