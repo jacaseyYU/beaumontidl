@@ -9,11 +9,10 @@
 pro mc_par
 
   nobs = 100
-  baseline = 4D
   ra = ten(2, 52, 56.8) * 15
   dec = ten(0, -24, 17.9)
-  tbase = 365.25
-  niter = 10000
+  tbase = 365.25 * 3.5
+  niter = 60
 
   j2000 = 2451545.0D
   delta = replicate(1, nobs) * (tbase / nobs)
@@ -27,6 +26,7 @@ pro mc_par
 
   fits = replicate({parfit}, niter)
   dpi = replicate(0., niter)
+  dmu = replicate(0., niter)
   for i = 0L, niter - 1, 1 do begin
      noisevec = replicate(noise[i], nobs)
 
@@ -34,14 +34,21 @@ pro mc_par
      decvec = dec + randomn(seed, nobs) * noise[i]; - pd / 36d5 * 100
      fits[i] = fit_pmpar(jd, ravec, decvec, noisevec, noisevec)
      dpi[i] = sqrt(fits[i].covar[4,4])
+     mu = sqrt(fits[i].ura^2 + fits[i].udec^2)
+     dmx = fits[i].covar[1,1] & dmy = fits[i].covar[3,3]
+     dmu[i] = sqrt(fits[i].ura^2 / mu^2 * dmx + fits[i].udec^2 / mu^2 * dmy)
   endfor
   plot, noise * 36d5, dpi, xtit='Positional error (mas)', $
         ytit = 'Parallax /pm error (mas)'
+  oplot, noise * 36d5, dmu, color = fsc_color('red')
 ;  oplot, minmax(noise/noise[0]), minmax(noise/noise[0]), color = fsc_color('red')
   a = linfit(noise * 36d5, dpi) & print, a 
-  b = linfit(noise * 36d5, sqrt(fits.covar[1,1])) & print, b 
-  b = linfit(noise * 36d5, sqrt(fits.covar[3,3])) & print, b
-  oplot, noise * 36d5, sqrt(fits.covar[1,1]), color = fsc_color('red')
+  b = linfit(noise * 36d5, dmu) & print, b 
+  noise *= 36d5
+  tbase /= 365.25
+  oplot, noise, noise / sqrt(niter) * sqrt(5), /line
+  oplot, noise, noise / sqrt(niter) * sqrt(5) / tbase, /line, color = fsc_color('red')
+;  oplot, noise * 36d5, sqrt(fits.covar[1,1]), color = fsc_color('red')
   return
 
   oplot, noise * 36d5, noise / sqrt(nobs - 3) * sqrt(3 / 2.) * 36d5, color = fsc_color('red')

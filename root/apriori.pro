@@ -1,3 +1,6 @@
+;+
+; Some old exploratory program looking at the LK bias
+;
 pro test
 ;- compare dist for M,par with and without malmquist bias correction
 dist = 20D

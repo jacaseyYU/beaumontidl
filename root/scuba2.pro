@@ -29,7 +29,6 @@ pro s2_f2m, flux = flux, distance = distance, kappa = kappa, $
   endif else distance = double(distance)
 
   ;- set opacity
-  ;- from Li and Draine 2001
   if ~keyword_set(kappa) then begin
      lambda = um450 ? 450. : 850.
      kappa = mass_opacity(lambda)
@@ -53,14 +52,20 @@ pro s2_f2m, flux = flux, distance = distance, kappa = kappa, $
   beamsize = keyword_set(um450) ? 32D : 120D
   beamsize = beamsize * (distance / 206265D)^2
 
-  ;- convert to mass
+  ;- convert to mass in solar masses
   mass = flux * 1d-3 * apcon('jy') * (distance * apcon('pc'))^2 / (kappa * b)
   mass /= apcon('m_solar')
 
   outmass = mass
-  surface_density = mass / beamsize
-  outcol = surface_density  / apcon('pc')^2 * apcon('m_solar') / (2 * apcon('m_proton'))
-  outav = outcol / 1.9d21
+  surface_density = mass / beamsize ;- solar masses per square parsec
+  mol_mass = 2.36
+  h2_frac = 4.5 / 5.5
+  ;- particle density in cm^-2
+  outcol = surface_density  / apcon('pc')^2 * apcon('m_solar') / (mol_mass * apcon('m_proton'))
+  ;- h2 density in cm^-2
+  outh2 = outcol * h2_frac
+  ;- convert from NH2 cm^-2 to Av
+  outav = outh2 / 1.9d21
 
   if ~keyword_set(silent) then begin
      print, '***********************'

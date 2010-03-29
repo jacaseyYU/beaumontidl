@@ -1,7 +1,7 @@
 ;+
 ; PURPOSE:
-;  This function calculates the sum of very small numbers in away that
-;  avoids computer underflow errors. This is useful in situations like
+;  This function calculates the sum of very small numbers in a way that
+;  avoids computer underflow errors. This is useful in situatioOBns like
 ;  likelihood maximization, where individual terms in the likelihood
 ;  can be very small. The program is vectorized to handle multiple
 ;  sums simultaneously.
