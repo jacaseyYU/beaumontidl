@@ -1,5 +1,34 @@
+;+
+; PURPOSE:
+;  This function mirror flips an image horizontally and/or
+;  vertically. 
+;
+; INPUTS:
+;  image: A 2d image to flip
+;
+; KEYWORD PARAMETERS:
+;  x: Set to flip along the horizontal direction
+;  y: Set to flip along the vertical direction
+;  both: Set to flip both horizontally and vertically
+;
+; RETURNS:
+;  A flipped version of image
+;
+; RESTRICTIONS:
+;  You must choose exactly one of /x, /y, or /both.
+;
+; MODIFICATON HISTORY:
+;  March 2010: Written by Chris Beaumont
+;-
 function cnb_flip, image, x = x, y = y, both = both
   compile_opt idl2
+  on_error, 2
+
+  if n_params() ne 1 then begin
+     print, 'calling sequence:'
+     print, 'result = cnb_flip(image, [/x, /y, /both]'
+     return, !values.f_nan
+  endif
 
   ndimen = size(image, /n_dimen)
   if ndimen ne 2 then $
@@ -29,7 +58,7 @@ function cnb_flip, image, x = x, y = y, both = both
      return, image[x,y]
   endif
 
-  message, 'must choose /x, /y, /xy'
+  message, 'must choose /x, /y, /both'
   return, 0
 end
 
