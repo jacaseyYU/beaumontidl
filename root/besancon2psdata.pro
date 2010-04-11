@@ -175,12 +175,15 @@ function besancon2psdata, besancon, optimistic = optimistic, $
      mu_err = ast_err * 3.5 / baseline * 1d3 ;- in mas. 3.5 from mc_par.pro
   endelse
   
-  if keyword_set(addnoise) then pi += pi_noise * pi_err ;- in arcsec
-  mux = besancon.mux * 10D + $
-        mu_err * mu_noise[0,*] * (keyword_set(addnoise) ? 0 : 1)
-  muy = besancon.muy * 10D + $
-        mu_err * mu_noise[1,*] * (keyword_set(addnoise) ? 0 : 1)
-  
+  mux = besancon.mux * 10D
+  muy = besancon.muy * 10D
+
+  if keyword_set(addnoise) then begin
+     pi += pi_noise * pi_err
+     mux +=  mu_err * mu_noise[0,*] 
+     muy += mu_err * mu_noise[1,*]
+  endif
+
   if keyword_set(fix_distance) then begin
      mux *= (besancon.dist / .1)
      muy *= (besancon.dist / .1)

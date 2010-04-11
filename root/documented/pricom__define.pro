@@ -1,3 +1,23 @@
+;+
+; PURPOSE:
+;  Projects a given vector onto the vector space defined by the
+;  principal compents, and returns the result
+;
+; INPUTS:
+;  data: A vector to project
+;
+; KEYWORD PARAMETERS:
+;  nterm: Set to an integer to project onto only the first nterm
+;         principal components.
+;  coeff: Set to a variable to hold the coefficients of the linear
+;         combination of principal components. In other words, result
+;         = sum( coeff[i] * PC_i )
+;
+; OUTPUTS:
+;  The projection of the input onto the principal components. This is
+;  equivalent to sum(coeff[i] * PC_i) where coeff[i] = sum(data *
+;  PC_i)
+;-  
 function pricom::project, data, nterm = nterm
   if ~keyword_set(nterm) then nterm = self.nevec else $
      nterm = nterm < self.nevec
@@ -18,19 +38,53 @@ function pricom::project, data, nterm = nterm
   return, result + mean
 end
 
+;+
+; PURPOSE:
+;  Return the principal components.
+;
+; INPUTS:
+;  none
+;
+; OUTPUTS:
+;  the principal components
+;-
 function pricom::get_pc
   return, *self.evec
 end
 
+;+
+; PURPOSE:
+;  Get the vector of variances associated with each principal
+;  component. In other words, var[i] is the fraction of the total
+;  variance in the training data, when projected onto PC_i
+;
+; INPUTS:
+;  none
+;
+; OUTPUTS:
+;  The variance array
+;-
 function pricom::get_variance
   return, *self.var
 end
 
+;+
+; PURPOSE:
+;  Get the mean of the training data
+;-
 function pricomm::get_mean
   return, *self.mean
 end
 
-
+;+
+; PURPOSE:
+;  Build a new PCA object.
+; 
+; INPUTS:
+;  data: an (ndim) by (nobj) array of training data. Contains (nobj)
+;  vectors, each with (ndim) elements. These are the data used to
+;  generate the principal components
+;-
 function pricom::init, data
 
   sz = size(data)
@@ -69,6 +123,10 @@ function pricom::init, data
   return, 1
 end
 
+;+
+; PURPOSE:
+;  Free all the pointers associated with the object, upon deletion
+;-
 pro pricom::cleanup
   ptr_free, self.eval
   ptr_free, self.evec
@@ -77,6 +135,18 @@ pro pricom::cleanup
   ptr_free, self.mean
 end
 
+;+
+; PURPOSE:
+;  This class provides a more convenient interface for working with
+;  principal component analysis. The user supplies a training data
+;  set, which is used to generate principal components via the IDL
+;  procedure PCOMP. The methods in this class then allow a simple way
+;  to project new vectors onto PCA space, obtain the principal
+;  components, etc.
+;
+; MODIFICATION HISTORY:
+;  April 2010: Written by Chris Beaumont
+;-
 pro pricom__define
   data = {pricom, nobj : 0, ndim: 0, nevec: 0, data : ptr_new(), $
           eval : ptr_new(), evec : ptr_new(), var: ptr_new(), mean : ptr_new()}
