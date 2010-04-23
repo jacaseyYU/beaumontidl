@@ -9,6 +9,11 @@ function psmag2error, mag, band, snr = snr
   rn = p.read_noise
   ;- get the effective background area in pixels
   beta = p.beta / p.pix_size^2
+  
+;  print, 'SKY COUNTS PER SECOND, INTEGRATED'
+;  print, p.sky * p.area * p.beta
+;  print, 'SOURCE COUNTS PER SECOND'
+;  print, src / p.time[band]
   b4pi = beta / (4 * !dpi) ;-  = psf variance, in pixels
   sigma = sqrt(p.beta / (4 * !dpi)) ;- psf sigma
 

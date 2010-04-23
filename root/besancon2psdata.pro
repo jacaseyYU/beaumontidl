@@ -168,10 +168,10 @@ function besancon2psdata, besancon, optimistic = optimistic, $
   assert, n_elements(ast_err) eq n_elements(besancon)
 
   if keyword_set(old_noise) then begin
-     pi_err = ast_err * sqrt(5) ;- in arcsec
+     pi_err = ast_err * sqrt(5)                  ;- in arcsec
      mu_err = ast_err * sqrt(5) / baseline * 1d3 ;- in mas
   endif else begin
-     pi_err = ast_err * 1.33              ;- 1.33 factor derived from mc_par.pro
+     pi_err = ast_err * 1.33    ;- 1.33 factor derived from mc_par.pro
      mu_err = ast_err * 3.5 / baseline * 1d3 ;- in mas. 3.5 from mc_par.pro
   endelse
   
