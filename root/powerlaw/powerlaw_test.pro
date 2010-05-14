@@ -3,7 +3,7 @@ pro powerlaw_test
 ;data = powerlaw_fakegen()
 ;- 2.5, 5.2
 
-readcol, '~/pro/powerlaw/js/PipeCores.dat', id, mass, r, rho, comment='#'
+readcol, 'powerlaw_data.dat', id, mass, r, rho, comment='#'
 
 data = mass
 

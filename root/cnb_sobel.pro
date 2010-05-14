@@ -1,4 +1,11 @@
 pro cnb_sobel, image, mag, theta
+  ;- check inputs
+  if n_params() ne 3 then begin
+     print, 'calling sequence:'
+     print, ' cnb_sobel, image, mag, theta'
+     return
+  endif
+
   xmask = float([[-1, 0, 1],[-2, 0, 2], [-1,0,1]])
   ymask = float([[1,2,1], [0,0,0], [-1, -2, -1]])
 
