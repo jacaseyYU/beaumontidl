@@ -11,9 +11,10 @@ function psmag2error, mag, band, snr = snr
   beta = p.beta / p.pix_size^2
   
 ;  print, 'SKY COUNTS PER SECOND, INTEGRATED'
-;  print, p.sky * p.area * p.beta
-;  print, 'SOURCE COUNTS PER SECOND'
-;  print, src / p.time[band]
+  print, p.sky * p.area * p.beta
+  print, 'SOURCE COUNTS PER SECOND'
+  print, src / p.time[band]
+  return, 0
   b4pi = beta / (4 * !dpi) ;-  = psf variance, in pixels
   sigma = sqrt(p.beta / (4 * !dpi)) ;- psf sigma
 
