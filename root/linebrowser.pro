@@ -2,6 +2,7 @@ pro linebrowser_event, event
   compile_opt idl2
   widget_control, event.id, get_uvalue = id
   widget_control, event.top, get_uvalue = ptr
+  if n_elements(id) eq 0 then return ;- happens for some of the text widgets - don't want any events!
 
   case id of
      'molecule': begin
@@ -20,12 +21,29 @@ pro linebrowser_event, event
      end
      'transition':(*ptr).transition = event.index
      'temperature':(*ptr).temperature = event.index
+     'radex': begin
+          molecule = (*ptr).names[(*ptr).molecule]+'.dat'
+          widget_control, (*ptr).radex_ncol, get_value = ncol
+          widget_control, (*ptr).radex_nvol, get_value = nvol
+          widget_control, (*ptr).radex_tkin, get_value = tkin
+          widget_control, (*ptr).radex_linewidth, get_value = linewidth
+          tback = 2.73
+          data = *((*ptr).data)
+          tran = (*ptr).transition
+          freq = data.freq[tran]
+          trad = radex(molecule, freq, freq/1d6, float(tkin), float(nvol), tback, float(ncol), float(linewidth))
+          lo = min(abs(trad.freq  - freq), hit)
+          assert, lo lt 1d-2
+          widget_control, (*ptr).radex_trad, set_value = string(trad[hit].tr, format='(e0.2)')
+          return
+       end
+     else:
   endcase
   linebrowser_update, ptr
 end
 
 pro linebrowser_update, ptr
- 
+  
   ;-update the labels
   data = *((*ptr).data)
   tran = (*ptr).transition
@@ -42,10 +60,11 @@ pro linebrowser_update, ptr
   fmt = '(e0.2)'
   widget_control, (*ptr).a, set_value=string(a,format = fmt)
   widget_control, (*ptr).b, set_value=string(b, format=fmt)
-  widget_control, (*ptr).freq, set_value = string(freq, format = '(e0.4)')
+  widget_control, (*ptr).freq, set_value = string(freq, format = '(e0.6)')
   widget_control, (*ptr).c, set_value = string(c,format = fmt)
   widget_control, (*ptr).t, set_value = string(tex,format=fmt)
   widget_control, (*ptr).n, set_value = string(nc, format=fmt)
+  widget_control, (*ptr).radex_trad, set_value=''
 end
 
 
@@ -156,7 +175,7 @@ end
 pro linebrowser, flo = flo, fhi = fhi
   if ~keyword_set(flo) then flo = 325 & if ~keyword_set(fhi) then fhi = 375
 
-  dir=''
+  dir=!version.os eq 'darwin' ? '/Users/beaumont/lambda/' : '/home/beaumont/lambda/'
   files = file_search(dir+'*dat', count = ct)
   if ct eq 0 then message, 'Cannot find data files in '+dir
 
@@ -178,7 +197,7 @@ pro linebrowser, flo = flo, fhi = fhi
 
   ;- generate the GUI
   tlb = widget_base(column = 2, title='Spectral Line Browser')
-  wid1 = 130 & wid2 = 120
+  wid1 = 150 & wid2 = 120
   ht = 40
   font = '-adobe-helvetica-medium-r-normal--12-120-75-75-p-67-iso8859-1'
 ;  font = '-adobe-helvetica-medium-r-normal--34-240-100-100-p-176-iso10646-1'
@@ -193,6 +212,14 @@ pro linebrowser, flo = flo, fhi = fhi
   l = widget_label(tlb, value = 'n_cr (cm^-3)  ', xsize = wid1, ysize = ht, /align_r, font = font)
   l = widget_label(tlb, value = 'Min freq (GHz)  ', xsize = wid1, ysize = ht, /align_r, font = font)
   l = widget_label(tlb, value = 'Max freq (GHz)  ', xsize = wid1, ysize = ht, /align_r, font = font)
+  l = widget_label(tlb, value = 'RADEX Simulation  ', xsize = wid1, ysize = ht, /align_r, font = font)
+  ht2 = ht * .8
+  l = widget_label(tlb, value = 'Column Density (cm^-2)  ', xsize = wid1, ysize = ht2, /align_r, font = font)
+  l = widget_label(tlb, value = 'Density (cm^-3)  ', xsize = wid1, ysize= ht2, /align_r, font = font)
+  l = widget_label(tlb, value = 'Tkin (K)  ', xsize = wid1, ysize = ht2, /align_r, font = font)
+  l = widget_label(tlb, value = 'Linewidth (km s^-1)  ', xsize = wid1, ysize = ht2, /align_r, font = font)
+  l = widget_label(tlb, value = 'Radiation Temperature ', xsize = wid1, ysize = ht2, /align_r, font = font)
+  l = widget_label(tlb, value='', xsize = wid1, ysize = ht, /align_r, font = font)
 
   
   ms = widget_droplist(tlb, value = names, uvalue = 'molecule', xsize = wid2, ysize = ht, font = font)
@@ -208,10 +235,19 @@ pro linebrowser, flo = flo, fhi = fhi
   n = widget_label(tlb, value='', uvalue='ncr', xsize = wid2, ysize = ht, /align_l, font = font)
   l = widget_label(tlb, value=strtrim(flo,2), uvalue='flo', xsize = wid2, ysize = ht, /align_l, font = font)
   l = widget_label(tlb, value=strtrim(fhi,2), uvalue='fhi', xsize = wid2, ysize = ht, /align_l, font = font)
+  l = widget_label(tlb, value = ' ', xsize = wid1, ysize = ht, /align_r, font = font)
+  radex_ncol = widget_text(tlb, value = '1e15', xsize = 10, ysize = 1, /align_l, font = font, /edit, /all)
+  radex_nvol = widget_text(tlb, value = '1e2 ', xsize = 10, ysize= 1, /align_l, font = font, /edit, /all)
+  radex_tkin = widget_text(tlb, value = '20', xsize = 10, ysize = 1, /align_l, font = font, /edit, /all)
+  radex_linewidth = widget_text(tlb, value = '1', xsize = 10, ysize = 1, /align_l, font = font, /edit, /all)
+  radex_trad = widget_label(tlb, value = '', xsize = wid2, ysize = ht, /align_l, font = font)
+  radex = widget_button(tlb, uvalue='radex', value='Run RADEX', xsize = wid2, ysize = ht)
 
   info = {files : files, names : names, data : ptr_new(data), $
          molecule : 0, transition: 0, temperature : 0, $
-         freq : f, a : a, b : b, c : c, t : t, n : n, ts : ts, tmp : tmp, flo : flo, fhi:fhi}
+         freq : f, a : a, b : b, c : c, t : t, n : n, ts : ts, tmp : tmp, flo : flo, fhi:fhi, $
+         ms : ms, radex_ncol : radex_ncol, radex_nvol : radex_nvol, radex_tkin : radex_tkin, $
+         radex_linewidth : radex_linewidth, radex_trad : radex_trad}
   ptr = ptr_new(info,/no_copy)
   widget_control, tlb, set_uvalue = ptr
   linebrowser_update, ptr
@@ -221,3 +257,4 @@ pro linebrowser, flo = flo, fhi = fhi
 
   
 end
+
