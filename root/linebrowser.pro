@@ -34,7 +34,7 @@ pro linebrowser_event, event
           trad = radex(molecule, freq, freq/1d6, float(tkin), float(nvol), tback, float(ncol), float(linewidth))
           lo = min(abs(trad.freq  - freq), hit)
           assert, lo lt 1d-2
-          widget_control, (*ptr).radex_trad, set_value = string(trad[hit].tr, format='(e0.2)')
+          widget_control, (*ptr).radex_trad, set_value = string(trad[hit].flux_kkms, format='(e0.2)')
           return
        end
      else:
@@ -218,7 +218,7 @@ pro linebrowser, flo = flo, fhi = fhi
   l = widget_label(tlb, value = 'Density (cm^-3)  ', xsize = wid1, ysize= ht2, /align_r, font = font)
   l = widget_label(tlb, value = 'Tkin (K)  ', xsize = wid1, ysize = ht2, /align_r, font = font)
   l = widget_label(tlb, value = 'Linewidth (km s^-1)  ', xsize = wid1, ysize = ht2, /align_r, font = font)
-  l = widget_label(tlb, value = 'Radiation Temperature ', xsize = wid1, ysize = ht2, /align_r, font = font)
+  l = widget_label(tlb, value = 'Integrated Flux (K km/s)', xsize = wid1, ysize = ht2, /align_r, font = font)
   l = widget_label(tlb, value='', xsize = wid1, ysize = ht, /align_r, font = font)
 
   
