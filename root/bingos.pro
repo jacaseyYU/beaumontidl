@@ -8,7 +8,12 @@ function wordscores, words
 end
 
 pro recursive_find, array, index, result
-  file = 'lower'
+  ;- the words list file is in the same directory as this one
+  path = file_which('bingos.pro')
+  split = strsplit(path, '/')
+  path = strmid(path, 0, split[n_elements(split)-1])+'words.txt'
+
+  file = '/home/beaumont/pro/words.txt'
 
   sz = n_elements(array)
   if n_elements(result) eq 0 then result = obj_new('stack')
