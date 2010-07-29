@@ -1,3 +1,8 @@
+;+
+; PURPOSE:
+;  A gui to practice guessing 7 letter words from a scrambled list of
+;  letters
+;-
 pro bingo_practice, scramble, answers
   compile_opt idl2
   common bingo, scrambles, words, uniq, us, ind, h, good, ct

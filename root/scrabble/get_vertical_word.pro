@@ -1,3 +1,22 @@
+;+
+; PURPOSE:
+;  This function finds the vertical word passing through a position
+;
+; INPUTS:
+;  board: The game board
+;  pos: The 2-element reference position
+;
+; KEYWORD PARAMETERS:
+;  single: If set, consider a single letter word to be valid. Otherwise,
+;  require words to be 2 letters or more.
+;
+; OUTPUTS:
+;  The word (not-necessarily a valid english word) passing through
+;  pos, or the empty string if no such word exists.
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function get_vertical_word, board, pos, single = single
   col_mask = bytarr(15,15) & col_mask[pos[0], *] = 1
   mask = board ne '' and col_mask

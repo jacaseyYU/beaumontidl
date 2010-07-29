@@ -1,3 +1,21 @@
+;+
+; PURPOSE:
+;  Given a game board and the location of newly-placed tiles, get the
+;  primary word
+;
+; INPUTS:
+;  board: The game board. 15x15 string array
+;  new_tiles: Integer 15x15 array. 1 if space i has been placed on
+;             this turn
+;  pos: The reference position used to place tiles
+;  direction: The reference direction used to place tiles
+;
+; OUTPUTS:
+;  The word, as a string
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function get_primary_word, board, new_tiles, pos, direction
   case direction of
      0: return, get_horizontal_word(board, pos, /single)

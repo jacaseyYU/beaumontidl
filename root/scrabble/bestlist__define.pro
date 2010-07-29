@@ -1,6 +1,32 @@
+;+
+; PURPOSE:
+;  bestlist is a class to store the n highest-scoring data
+;  points. A 'data point' can be any variable with an associated
+;  score. 
+;
+; METHODS:
+;  add: Add a new element to the list
+;  fetch_best: return the best score + data
+;  fetch: return a given score + data by rank index
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
+
+;+
+; PURPOSE:
+;  add a new datum to the list
+; 
+; INPUTS:
+;  score: A scalar specifying the priority/score of the datum
+;  data: (optional) the data itself. Any variable (scalar or vector)
+;  will do. 
+;-
 pro bestlist::add, score, data
   lo = min(*self.scores, loc)
   if score gt lo then begin
+     
+     ;- do not include duplicate data points
      hit = where((*self.scores) eq score, ct)
      for i = 0, ct - 1 do begin
         d = (*self.data)[hit[i]]
@@ -14,10 +40,35 @@ pro bestlist::add, score, data
   endif
 end
   
+
+;+
+; PURPOSE:
+;  Return the best data point, with its score
+;
+; KEYWORD PARAMETERS:
+;  score: Variable to hold the score
+;
+; OUTPUTS:
+;  The best-scoring data point
+;-
 function bestlist::fetch_best, score = score
   return, self->fetch(0, score = score)
 end
 
+
+;+
+; PURPOSE:
+;  Fetch the n-th best data point
+;
+; INPUTS:
+;  index; The rank of the data point to return
+;
+; KEYWORD PARAMETERS:
+;  score: A variable to hold the score
+;
+; OUTPUTS:
+;  The index-th best data point
+;-
 function bestlist::fetch, index, score = score
   if index ge self.capacity || index lt 0 then $
      message, 'requested index must be in the range [0, capacity-1]'
@@ -29,6 +80,15 @@ function bestlist::fetch, index, score = score
   else return, !values.f_nan
 end
 
+;+
+; PURPOSE:
+;  Defines the bestlist object
+;
+; INPUTS:
+;  capacity: Integer giving the number of unique data points to keep
+;  track of. The lowest ranking excess data points will be discarded
+;  to limit the size of the object
+;-
 function bestlist::init, capacity
   self.capacity = capacity
   self.scores = ptr_new(fltarr(capacity))

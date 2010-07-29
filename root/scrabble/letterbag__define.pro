@@ -1,3 +1,22 @@
+;+
+; The letterbag class contains information about the number of each
+; tiles for each letter in a scrabble game. It contains functions to
+; draw from these letters without replacement.
+;
+; MODIFICATION HISTORY: July 2010: Written by Chris Beaumont
+;-
+
+;+ 
+; PURPOSE:
+;  Draw n tiles from the letter bag
+;
+; INPUTS:
+;  number: number of tiles to draw. The actual number will be
+;  truncated if there are not this many tiles left in the bag.
+;
+; OUTPUTS:
+;  This many tiles, drawn at random from the bag
+;-
 function letterbag::draw, number
   if self.pos eq 99 then return, ''
   number = (100 - self.pos) < number
@@ -7,13 +26,16 @@ function letterbag::draw, number
   return, result
 end
 
+;+
+; PURPOSE:
+;  Create the letter bag
+;-
 function letterbag::init
-  alphabet = strsplit('a b c d e f g h i j k l m n o p q r s t u v w x y z', ' ', /extract)
-  ;- note that there are really 9 "a"s and 2 blanks
-  freq = [11, 2, 2, 4, 12, 2, 3, 2, 9, 1, 1, 4, 2, 6, 8, 2, 1, 6, 4, 6, 4, 2, 2, 1, 2, 1]
-  assert, n_elements(freq) eq 26
-  assert, total(freq) eq 100
-  for i = 0, 25 do tiles = append(tiles, replicate(alphabet[i], freq[i]))
+  
+  alphabet = strsplit('a b c d e f g h i j k l m n o p q r s t u v w x y z .', ' ', /extract)
+  freq = [9, 2, 2, 4, 12, 2, 3, 2, 9, 1, 1, 4, 2, 6, 8, 2, 1, 6, 4, 6, 4, 2, 2, 1, 2, 1, 2]
+  for i = 0, 26 do tiles = append(tiles, replicate(alphabet[i], freq[i]))
+  ;- shuffle the tiles
   tiles = tiles[sort(randomu(seed, 100))]
   self.tiles = tiles
   return, 1

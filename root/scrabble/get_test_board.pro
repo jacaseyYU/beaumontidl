@@ -1,3 +1,13 @@
+;+ 
+; PURPOSE:
+;  Return a test board for debugging / testing purpose
+;
+; OUTPUTS:
+;  A simple scrabble board
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function get_test_board
   board = replicate('', 15, 15)
 
