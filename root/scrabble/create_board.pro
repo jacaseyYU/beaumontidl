@@ -1,3 +1,24 @@
+;+
+; PURPOSE:
+;  Creates and populates a common block to hold the letter and word
+;  bonuses on a scrabble board, as well as an array to keep track of
+;  which played tiles are blanks.
+;
+; INPUTS;
+;  l: On output, holds the letter bonuses. A 15x15 integer array
+;  w: On output, holds the word bonuses.
+;
+; COMMON BLOCKS:
+;  scrabble_board: holds letters, words, blanks. All 15x15 integer
+;  arrays.
+;
+; NOTES:
+;  The letter/word bonus pattern corresponds to Words with Friends,
+;  and not the original scrabble board.
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 pro create_board, l, w
   common scrabble_board, letters, words, blanks
   letters = intarr(15, 15) + 1
@@ -40,20 +61,13 @@ pro create_board, l, w
            [1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1]]
   w = words
   blanks = replicate(0, 15, 15)
-  assert, n_elements(words[0,*]) eq 15 && n_elements(words[*,0]) eq 15
-  assert, n_elements(letters[0,*]) eq 15 && n_elements(letters[*,0]) eq 15
-  ;- lets get this later
-;  letter_bonus[[6, 8], [0,0] = 3
-;  letter_bonus[[2, 12], [1, 1] = 2
-;  letter_bonus[[1, 4, 10, 13], [2, 2, 2, 2]] = 2
-;  letter_bonus[[3, 11], [3, 3]] = 3
 end
   
   
 pro test
   common scrabble_board, letters, words
   create_board
-  print, letters, format='(15(i1, 1x))'
+  print_board, letters
   print,''
-  print, words, format='(15(i1, 1x))'
+  print_board, words
 end
