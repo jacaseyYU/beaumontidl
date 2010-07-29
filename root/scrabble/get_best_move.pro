@@ -101,5 +101,15 @@ pro test
   ;- look at the best moves
   ii = 0
   b = best->fetch(ii++, score = s) & print_board, b & print, s, format='("Best score: ", i0)'
-  stop
+
+  profiler, /report, data = data, out = out
+  s = reverse(sort(data.only_time))
+  for i = 0, n_elements(s) - 1, 1 do begin
+     hit = (where(strmatch(out, data[s[i]].name+'*')))[0]
+     print, out[hit]
+     if hit lt n_elements(out)-1 && strmid(out[hit+1], 0, 1) eq ' ' then $
+        print, out[hit+1]
+  endfor
+  print, total(data.only_time), max(data.time)
+  plot, total(data[s].only_time, /cumul), psym = -4
 end

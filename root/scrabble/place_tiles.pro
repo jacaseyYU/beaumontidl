@@ -1,3 +1,24 @@
+;+
+; PURPOSE:
+;  This function places tiles onto a board at a specified position and
+;  direction. It "hops over" occupied spaces, potentially creating
+;  words that utilize tiles on the board.
+;
+; INPUTS:
+;  old_board: The current board
+;  tiles: A string array of tiles to place on the board
+;  pos: The reference position for the current turn
+;  direction: The tile placement direction. Words start/end at pos and
+;             flow left/down/right/up from that point, for dir 0-3
+;
+; OUTPUTS:
+;  new_board: The new board, containing tiles. 
+;  new_tiles: A 15x15 byte mask, indicating what spaces the new tiles
+;             went to. 
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function place_tiles, old_board, tiles, $
                       pos, direction, $
                       new_board, new_tiles

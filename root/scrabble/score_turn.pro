@@ -1,3 +1,21 @@
+;+
+; PURPOSE:
+;  Calculates the score for a horizontal word
+;
+; INPUTS:
+;  board: The board
+;  new_tiles: A byte mask with 1's showing where the new tiles are
+;  pos: The reference position to consider
+;
+; KEYWORD PARAMETRS:
+;  debug: Set to print debugging info to the screen
+;
+; OUTPUTS:
+;  The score for the horizontal word passing through pos
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function score_word_horizontal, board, new_tiles, pos, debug = debug
 
   compile_opt idl2
@@ -38,6 +56,24 @@ function score_word_horizontal, board, new_tiles, pos, debug = debug
   return, get_word_score(ls, letter_bonus, word_bonus)
 end
 
+;+
+; PURPOSE:
+;  Calculates the score for a vertical word
+;
+; INPUTS:
+;  board: The board
+;  new_tiles: A byte mask with 1's showing where the new tiles are
+;  pos: The reference position to consider
+;
+; KEYWORD PARAMETRS:
+;  debug: Set to print debugging info to the screen
+;
+; OUTPUTS:
+;  The score for the vertical word passing through pos
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function score_word_vertical, board, new_tiles, pos, debug = debug
   compile_opt idl2
   common scrabble_board, letters, words, blanks
@@ -86,6 +122,24 @@ function score_word_vertical, board, new_tiles, pos, debug = debug
 end
 
 
+;+
+; PURPOSE:
+;  This function calculates the score for a turn of scrabble.
+;
+; INPUTS:
+;  board: The scrabble board, containing the newly-placed tiles.
+;  new_tiles: A 15x15 byte mask, with 1's at the position of
+;             the new tiles.
+;
+; KEYWORD PARAMETERS:
+;  debug: If set, print debugging info to the screen
+;
+; OUTPUTS:
+;  The total score for this turn
+;
+; MODIFICATION HISTORY:
+;  July 2010: Written by Chris Beaumont
+;-
 function score_turn, board, new_tiles, debug = debug
   compile_opt idl2
 
