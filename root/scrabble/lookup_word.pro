@@ -1,16 +1,17 @@
 ;+
 ; PURPOSE:
-;  Given a word fragment and a set of remaining letters, this function
-;  returns a list of possible valid words
+;  This function searches for a word fragment in the dictionary, and
+;  returns the subset of words containing this fragment.
 ;
 ; INPUTS:
-;  fragment: A string word fragment
-;  remainder: A string array of remaining letters
+;  fragment: A string word fragment. Either a single string or array
+;            of letters.
 ;
 ; KEYWORD PARAMTERS:
-;  single: On output, will be 1 if fragment is a word
+;  single: On output, will be 1 if fragment itself is a word
 ;  wordlist: Set to a string array to override the default (very
-;            large) dictionary with a more restrictive subset.
+;            large) dictionary with a more restrictive subset (e.g.,
+;            from winnow_words, or previous calls to this function).
 ;  count: On output, the number of words returned
 ;
 ; OUTPUTS:
@@ -25,35 +26,20 @@
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
 ;-
-function lookup_word, fragment, $ ;- ordered letter array of word fragment
-                      remainder, $ ;- other tiles to use
-                      single = single, $ ;- set to 1 fragment itself is a word
-                      wordlist = wordlist, $ ;- look for words here instead of dict
+function lookup_word, fragment, $
+                      single = single, $
+                      wordlist = wordlist, $
                       count = count
 
 
   common scrabble, dictionary
   if n_elements(dictionary) eq 0 then read_dictionary
 
-  if n_elements(fragment) gt 1 then $
-     word = strjoin(fragment) $
-  else word = fragment
+  word = n_elements(fragment) gt 1 ? strjoin(fragment) : fragment
 
-  if keyword_set(wordlist) then $
-     junk = where(wordlist eq word, ct) $
-  else $
-     junk = where(dictionary eq word, ct)          
+  if keyword_set(single) then single = is_word(word, wordlist = wordlist)
 
-  single = ct eq 1
-
-  ;- make a regular expression from the remaining tiles
-  if n_elements(remainder) ne 0 then begin
-     regex = '('
-     for i = 0, n_elements(remainder)-2 do regex+=remainder[i]+'|'
-     regex+=remainder[n_elements(remainder)-1]
-     regex+=')'
-     regex = '^'+regex+'*'+word+regex+'*$'
-  endif else regex = '^'+word+'$'
+  regex=word
 
   ;- choose the dictionary, and run stregex
   if keyword_set(wordlist) then begin

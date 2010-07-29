@@ -9,7 +9,7 @@
 ;  position: The reference position -- either the start or end
 ;            position, depending on direction. A 2 element array
 ;  direction: 0-3, indicating that letters should be placed moving to
-;             the right/top/left/bottom of position
+;             the right/bottom/left/top of position
 ;  minlength: The number of tiles that must be placed in order fo the
 ;             word to connect with an already-played tile
 ;  new_tiles: A 15x15 integer array, indicating which tiles have been
@@ -75,11 +75,8 @@ pro get_best_move_fixed, board, tiles, position, direction, minlength, $
     
      ;- bad primary fragment?
      primary = get_primary_word(new_board, new_tiles, position, direction)
-     if ntile eq 1 then $
-        options = lookup_word(primary, junk, count = ct, wordlist = wordlist) $
-     else $
-        options = lookup_word(primary, tiles[1:*], count = ct, wordlist = wordlist)
-
+     options = lookup_word(primary, count = ct, wordlist = wordlist)
+     
      if TESTING then print, primary
      
      ;- no valid, sufficiently long words containing the primary fragment

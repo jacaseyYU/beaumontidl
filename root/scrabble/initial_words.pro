@@ -25,11 +25,10 @@
 function initial_words, board, tiles, pos, direction, count = count
 
   ;- extract tiles from the relevant row/column
-  mask = replicate(0, 15, 15)
-  if direction eq 0 or direction eq 2 then mask[*,pos[1]] = 1
-  if direction eq 1 or direction eq 3 then mask[pos[0],*] = 1
-  hit = where(mask and board ne '', ct)
-  t = ct eq 0 ? tiles : [tiles, board[hit]]
+  if direction eq 0 or direction eq 2 then mask = board[*,pos[1]]
+  if direction eq 1 or direction eq 3 then mask = board[pos[0],*]
+  hit = where(mask ne '', ct)
+  t = ct eq 0 ? tiles : [tiles, mask[hit]]
 
   return, winnow_words(strjoin(t), count = count)
 end

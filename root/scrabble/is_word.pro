@@ -9,6 +9,8 @@
 ; KEYWORD PARAMETERS:
 ;  matches: On output, will hold the valid words matched by the input
 ;  IF that input contains a blank
+;  wordlist: A string array that, if present, overrides the default
+;  dictionary. 
 ;
 ; OUTPUTS:
 ;  1 if word corresponds to one or more valid words. 0 otherwise
@@ -19,7 +21,7 @@
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
 ;-
-function is_word, word, matches = matches
+function is_word, word, matches = matches, wordlist = wordlist
   matches = ''
 
   common scrabble, dictionary
@@ -29,8 +31,13 @@ function is_word, word, matches = matches
   pos = strpos(word, '.')
   if pos eq -1 then begin
      ;- no - just search for word
-     ind = value_locate(dictionary, word)
-     return, dictionary[[ind]] eq word
+     if keyword_set(wordlist) then begin
+        ind = value_locate(wordlist, word)
+        return, wordlist[[ind]] eq word
+     endif else begin
+        ind = value_locate(dictionary, word)
+        return, dictionary[[ind]] eq word
+     endelse
   endif else begin
 
      ;- find the first and last possible position in dictionary
@@ -45,14 +52,22 @@ function is_word, word, matches = matches
      
      ;- this bracket of words is too large if the first
      ;- letter is blank. In that case, use winnow_word.
-     if pos eq 0 then d = winnow_words(word) else begin
-        lo = value_locate(dictionary, first)
-        hi = value_locate(dictionary, last)
-        d = dictionary[lo:hi]
+     if pos eq 0 && ~keyword_set(wordlist) $
+     then d = winnow_words(word, wordlist = wordlist) else begin
+        if keyword_set(wordlist) then begin
+           lo = value_locate(wordlist, first)
+           hi = value_locate(wordlist, last)
+           d = wordlist[lo:hi]
+        endif else begin
+           lo = value_locate(dictionary, first)
+           hi = value_locate(dictionary, last)
+           d = dictionary[lo:hi]
+        endelse
      endelse
 
      result = stregex(d, '^'+word+'$', /fold, /boolean)
      hit = where(result, count)
+
      if count ne 0 then matches = d[hit]
      return, count ne 0
   endelse
