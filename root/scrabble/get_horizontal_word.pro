@@ -13,7 +13,7 @@ function get_horizontal_word, board, pos, single = single
   h2 = array_indices(board, hit)
   cols = minmax(h2[0,*])
   row = h2[1,0]
-  return, strjoin(board[cols[0]:cols[1], row])
+  return, (strjoin(board[cols[0]:cols[1], row]))[0]
 end
 
 pro test

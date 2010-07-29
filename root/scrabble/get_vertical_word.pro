@@ -13,5 +13,5 @@ function get_vertical_word, board, pos, single = single
   h2 = array_indices(board, hit)
   col = h2[0,0]
   rows = minmax(h2[1,*])
-  return, strjoin(reform(board[col, rows[0]:rows[1]]))
+  return, (strjoin(reform(board[col, rows[0]:rows[1]])))[0]
 end

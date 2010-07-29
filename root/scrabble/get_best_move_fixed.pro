@@ -1,4 +1,4 @@
-pro get_best_move_fixed, board, tiles, position, direction, $
+pro get_best_move_fixed, board, tiles, position, direction, minlength, $
                          new_tiles, $
                          best_board, wordlist = wordlist
 
@@ -51,15 +51,15 @@ pro get_best_move_fixed, board, tiles, position, direction, $
      for j = 0, ct - 1, 1 do if ~is_word(secondary[j]) then goto, unset
      
      ;- so far so good. is this a valid placement?
-     if is_word(primary) then begin
-        score = score_turn(new_board, new_tiles, new_tiles*0)
+     if minlength le 1 && is_word(primary) then begin
+        score = score_turn(new_board, new_tiles)
         assert, finite(score)
         best_board->add, score, new_board
      endif
      
      ;- recurse on next tile placement
      if ntile ge 2 then get_best_move_fixed, new_board, tiles[1:*], $
-                                             position, direction, $
+                                             position, direction, minlength-1, $
                                              1 * new_tiles, best_board, wordlist = options
 
      ;- unplace the tile, restore original tile order

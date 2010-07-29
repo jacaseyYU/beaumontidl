@@ -1,6 +1,12 @@
 pro bestlist::add, score, data
   lo = min(*self.scores, loc)
   if score gt lo then begin
+     hit = where((*self.scores) eq score, ct)
+     for i = 0, ct - 1 do begin
+        d = (*self.data)[hit[i]]
+        if ptr_valid(d) && min( *d eq data) then return
+     endfor
+
      ;- replace lowest scoring element with this data
      (*self.scores)[loc] = score
      ptr_free, (*self.data)[loc]
