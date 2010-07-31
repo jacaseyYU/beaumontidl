@@ -18,7 +18,7 @@
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
 ;-
-function winnow_words, word, count = count
+function winnow_words, word, count = count, wordlist = wordlist, wordfreq = wordfreq
   compile_opt idl2
   common scrabble, dictionary, letter_freq
   if n_elements(dictionary) eq 0 then read_dictionary
@@ -31,10 +31,18 @@ function winnow_words, word, count = count
   endwhile
 
   freq = letter_freq(word)
-  off = letter_freq
+  if keyword_set(wordlist) then begin
+     if ~keyword_set(wordfreq) then begin
+        wordfreq = bytarr(26, n_elements(wordlist))
+        for ii = 0, n_elements(wordlist) - 1 do wordfreq[*,ii] = letter_freq(wordlist[ii])
+     endif
+     off = wordfreq
+  endif else off = letter_freq
+
   for i = 0, 25 do off[i,*] = (off[i,*] - freq[i]) * (off[i,*] ge freq[i])
   off = total(off, 1)
 
   valid = where(off le n_blank, count)
-  if count eq 0 then return, -1 else return, dictionary[valid]
+  if count eq 0 then return, -1 else return, $
+     keyword_set(wordlist) ? wordlist[valid] : dictionary[valid]
 end

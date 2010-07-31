@@ -14,7 +14,7 @@
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
 ;-
-function get_best_move, board, tiles
+function get_best_move, board, tiles, hand = hand
 
   ;- find possible insertion points
   get_insertions, board, indices, directions, minlengths, count = ct
@@ -40,7 +40,7 @@ function get_best_move, board, tiles
         get_best_move_fixed, board, tiles, indices[*,hit[jj]], $
                              directions[hit[jj]], minlengths[hit[jj]], $
                              bytarr(15, 15), $
-                             best_board, wordlist = wordlist
+                             best_board, wordlist = wordlist, hand = hand
      endfor
 
      ;- same as vertical, but for row i
@@ -55,7 +55,7 @@ function get_best_move, board, tiles
         get_best_move_fixed, board, tiles, indices[*,hit[jj]], $
                              directions[hit[jj]], minlengths[hit[jj]], $
                              bytarr(15, 15), $
-                             best_board, wordlist = wordlist
+                             best_board, wordlist = wordlist, hand = hand
      
      endfor
   endfor
@@ -75,14 +75,14 @@ pro test
   profiler, /reset & profiler, /system & profiler
 
   ;- the blaying board
-  board = [[ '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], $ ;-0
-           [ '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], $ ;-1
-           [ '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], $ ;-2
-           [ '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], $ ;-3
-           [ '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], $ ;-4
+  board = [[ '', '', '', '', '', '', '', '', '', '', '','o', '', '', ''], $ ;-0
+           [ '', '', '', '', '', '', '', '', '', '', '','u', '', '', ''], $ ;-1
+           [ '', '', '', '', '', '', '', '', '', '', '','t', '', '', ''], $ ;-2
+           [ '', '', '', '', '', '', '', '', '', '', '','s', '', '', ''], $ ;-3
+           [ '', '', '', '', '', '', '', '', '', '', '','i', '', '', ''], $ ;-4
            [ '', '', '', '', '', '', '', '', '','w','i','t','t','y', ''], $ ;-5
            [ '','c', '', '', '', '', '', '', '','i', '', '', '', '', ''], $ ;-6
-           [ '','l', '', '', '', '','p','o','u','c','h','e','d', '', ''], $ ;-7
+           [ '','l','u','d','e', '','p','o','u','c','h','e','d', '', ''], $ ;-7
            ['l','a', '', '', '', '', '', '', '','k','i','f', '', '', ''], $ ;-8
            ['u','m', '', '', '','g', '', '','h','e', '', '', '', '', ''], $ ;-9
            ['n', '', '', '', '','i', '', '','o','r', '', '', '', '', ''], $ ;-10
@@ -93,14 +93,16 @@ pro test
 
   print_board, board
   ;- the hand
-  letters=['n','s','t','u','i','o','t']
+  letters=['n','t','v','z','w','s','t']
 
   ;- the best board
-  best = get_best_move(board, letters)
+  best = get_best_move(board, letters, /hand)
   
   ;- look at the best moves
-  ii = 0
+  ii = 2
   b = best->fetch(ii++, score = s) & print_board, b & print, s, format='("Best score: ", i0)'
+  print, score_turn(b, b ne board)
+  return
 
   profiler, /report, data = data, out = out
   s = reverse(sort(data.only_time))

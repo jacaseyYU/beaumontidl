@@ -34,7 +34,7 @@
 
 pro get_best_move_fixed, board, tiles, position, direction, minlength, $
                          new_tiles, $
-                         best_board, wordlist = wordlist
+                         best_board, wordlist = wordlist, hand = hand
   compile_opt idl2
   TESTING = 0
 
@@ -90,6 +90,10 @@ pro get_best_move_fixed, board, tiles, position, direction, minlength, $
      if minlength le 1 && is_word(primary) then begin
         ;- add this valid move to the bestlist
         score = score_turn(new_board, new_tiles)
+        if keyword_set(hand) then begin
+           if n_elements(tiles) eq 1 then score += hand_strength() $
+           else score += hand_strength(tiles[1:*])
+        endif
         assert, finite(score)
         best_board->add, score, new_board
      endif
@@ -97,7 +101,8 @@ pro get_best_move_fixed, board, tiles, position, direction, minlength, $
      ;- recurse on next tile placement
      if ntile ge 2 then get_best_move_fixed, new_board, tiles[1:*], $
                                              position, direction, minlength-1, $
-                                             1 * new_tiles, best_board, wordlist = options
+                                             1 * new_tiles, best_board, wordlist = options, $
+                                             hand = hand
 
      ;- unplace the tile, restore original tile order
      unset:
