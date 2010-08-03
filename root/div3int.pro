@@ -29,8 +29,9 @@
 ;
 ; MODIFICATION HISTORY:
 ;  June 2010: Written by Chris Beaumont
+;  August 3 2010: Changed name from div3 to div3int cnb.
 ;-
-function div3, x, y, z, verts, conn, unit = unit
+function div3int, x, y, z, verts, conn, unit = unit
 
   compile_opt idl2
 
@@ -137,7 +138,7 @@ pro test
   vy = im * 0
   vz = im * 0
   print, 'Divergence free field'
-  print, div3(vx, vy, vz, vert, conn)
+  print, div3int(vx, vy, vz, vert, conn)
 
   ;- divergence = 1
   vx = x
@@ -146,7 +147,7 @@ pro test
   print, 'tetra volume:', tetra_volume(vert, conn)
   print, 'solid?', mesh_issolid(conn)
   print, 'triangles:', mesh_numtriangles(conn)
-  print, 'divergence:', div3(vx, vy, vz, vert, conn)
+  print, 'divergence:', div3int(vx, vy, vz, vert, conn)
   print, 'surface area: ', mesh_surfacearea(vert, conn)
 end
 
