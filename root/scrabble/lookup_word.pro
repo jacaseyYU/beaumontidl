@@ -32,7 +32,7 @@ function lookup_word, fragment, $
                       count = count
 
 
-  common scrabble, dictionary
+  common scrabble, dictionary, letter_freq, len_ri
   if n_elements(dictionary) eq 0 then read_dictionary
 
   word = n_elements(fragment) gt 1 ? strjoin(fragment) : fragment

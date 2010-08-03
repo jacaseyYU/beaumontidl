@@ -11,7 +11,7 @@
 ;-
 pro read_dictionary
   compile_opt idl2
-  common scrabble, dictionary, letter_freq
+  common scrabble, dictionary, letter_freq, len_ri
 
   ;- options
   ;- TWL06 -- Seems to be the one closest to words with friends
@@ -22,6 +22,7 @@ pro read_dictionary
   dictionary = strlowcase(dictionary)
   letter_freq = bytarr(26, n_elements(dictionary))
   for i = 0L, n_elements(dictionary) - 1 do letter_freq[*,i] = letter_freq(dictionary[i])
+  h = histogram(strlen(dictionary), min = 0, rev = len_ri)
 end
 
 

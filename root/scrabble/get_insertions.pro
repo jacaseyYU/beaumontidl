@@ -65,6 +65,7 @@ end
 ;
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
+;  July 30 2010: Fixed bug when board is empty
 ;-
 pro get_insertions, board, indices, directions, minlengths, count = count
   
@@ -74,7 +75,7 @@ pro get_insertions, board, indices, directions, minlengths, count = count
      indices = [7, 7] ;- the center tile
      directions = 0
      count = 1
-     minlength = 2
+     minlengths = 2
      return
   endif
 
@@ -121,7 +122,6 @@ pro get_insertions, board, indices, directions, minlengths, count = count
   ind = i[0] & dir = d[0] & min = m[0]
   for j = 1, count - 1, 1 do begin
      bad = where(i[j] eq ind and d[j] eq dir, ct)
-     if i[j] eq 8 + 9 * 15 then print, d[j], m[j]
 
      if ct ne 0 then begin
         assert, ct eq 1

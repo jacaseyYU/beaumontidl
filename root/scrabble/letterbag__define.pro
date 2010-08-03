@@ -26,6 +26,10 @@ function letterbag::draw, number
   return, result
 end
 
+function letterbag::isEmpty
+  return, self.pos eq 99
+end
+
 ;+
 ; PURPOSE:
 ;  Create the letter bag
