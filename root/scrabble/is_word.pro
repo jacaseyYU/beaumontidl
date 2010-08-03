@@ -1,3 +1,5 @@
+;XXX hande 1 letter, no length matches better
+
 ;+
 ; PURPOSE:
 ;  Determines if the given word (possibly including blanks) is a valid
@@ -22,9 +24,10 @@
 ;  July 2010: Written by Chris Beaumont
 ;-
 function is_word, word, matches = matches, wordlist = wordlist
+  if strlen(word) eq 1 then return, 0
   matches = ''
 
-  common scrabble, dictionary
+  common scrabble, dictionary, letter_freq, len_ri
   if n_elements(dictionary) eq 0 then read_dictionary
  
   ;- do we have any blanks?
@@ -52,18 +55,20 @@ function is_word, word, matches = matches, wordlist = wordlist
      
      ;- this bracket of words is too large if the first
      ;- letter is blank. In that case, use winnow_word.
-     if pos eq 0 && ~keyword_set(wordlist) $
-     then d = winnow_words(word, wordlist = wordlist) else begin
+     ;if pos1 eq 0 && ~keyword_set(wordlist) $
+     ;then d = winnow_words(word) else begin
         if keyword_set(wordlist) then begin
-           lo = value_locate(wordlist, first)
-           hi = value_locate(wordlist, last)
+           lo = value_locate(wordlist, first) > 0
+           hi = value_locate(wordlist, last) < (n_elements(wordlist) - 1)
            d = wordlist[lo:hi]
         endif else begin
-           lo = value_locate(dictionary, first)
-           hi = value_locate(dictionary, last)
-           d = dictionary[lo:hi]
+           len = strlen(first)
+           d = dictionary[len_ri[len_ri[len] : len_ri[len+1]-1]]
+           lo = 0 > value_locate(d, first) < (n_elements(dictionary) - 1)
+           hi = 0 > value_locate(d, last) < (n_elements(dictionary) - 1)
+           d = d[lo:hi]
         endelse
-     endelse
+     ;endelse
 
      result = stregex(d, '^'+word+'$', /fold, /boolean)
      hit = where(result, count)

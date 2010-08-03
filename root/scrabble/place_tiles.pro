@@ -30,9 +30,13 @@ function place_tiles, old_board, tiles, $
   ind = 0
   p = pos
   while todo ne 0 do begin
+     assert, tiles[ind] ne ''
      ;- failure?
-     if p[0] lt 0 || p[0] gt 14 || $
-        p[1] lt 0 || p[1] gt 14 then return, 0
+     if (p[0] lt 0) || (p[0] gt 14) || (p[1] lt 0) || (p[1] gt 14) then begin
+        new_tiles *= 0
+        new_board[*] = ''
+        return, 0
+     endif
 
      ;-occupied?
      if new_board[p[0], p[1]] eq '' then begin

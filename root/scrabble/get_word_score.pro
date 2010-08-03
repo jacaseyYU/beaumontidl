@@ -19,6 +19,7 @@
 ;-
 function get_word_score, letters, letter_bonus, word_bonus
   common letter_values, values
+  if n_elements(values) eq 0 then letter_values
 
   score = values[byte(letters)] * letter_bonus
   score *= product(word_bonus)
