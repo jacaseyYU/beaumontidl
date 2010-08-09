@@ -9,7 +9,7 @@
 ;  w: On output, holds the word bonuses.
 ;
 ; COMMON BLOCKS:
-;  scrabble_board: holds letters, words, blanks. All 15x15 integer
+;  scrabble_board: holds letters, words. Both 15x15 integer
 ;  arrays.
 ;
 ; NOTES:
@@ -18,9 +18,11 @@
 ;
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
+;  August 2010: Removed blank common block in favor for capital letter
+;  system. cnb.
 ;-
 pro create_board, l, w
-  common scrabble_board, letters, words, blanks
+  common scrabble_board, letters, words
   letters = intarr(15, 15) + 1
   words = intarr(15, 15) + 1
 
@@ -60,7 +62,6 @@ pro create_board, l, w
            [1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1, 1], $
            [1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1]]
   w = words
-  blanks = replicate(0, 15, 15)
 end
   
   

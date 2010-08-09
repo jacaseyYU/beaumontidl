@@ -30,14 +30,16 @@
 ;
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
+;  Aug 7 2010: Changed how blanks are handeled. cnb.
 ;-
 
 pro get_best_move_fixed, board, tiles, position, direction, minlength, $
                          new_tiles, $
                          best_board, wordlist = wordlist, hand = hand
   compile_opt idl2
-  TESTING = 0
 
+  TESTING = 0
+  
   ;- get a sensible wordlist, if not provided
   if ~keyword_set(wordlist) then begin
      wordlist = initial_words(board, tiles, position, direction, count = ct)
@@ -65,44 +67,66 @@ pro get_best_move_fixed, board, tiles, position, direction, minlength, $
      try = place_tiles(board, tiles[0], position, $
                        direction, new_board, nt)
      if try eq 0 then goto, unset ;- not at edge
-
+     
+     npos = where(nt)
+     assert, total(nt) eq 1
      new_tiles = new_tiles or nt
+     
      if TESTING then begin
         print_board, new_board
         print_board, new_tiles
      endif
-
     
      ;- bad primary fragment?
      primary = get_primary_word(new_board, new_tiles, position, direction)
-     options = lookup_word(primary, count = ct, wordlist = wordlist)
-     
+     p_bak = primary
+     options = lookup_word(primary, count = ct, wordlist = wordlist, /anchor)
      if TESTING then print, primary
-     
+
      ;- no valid, sufficiently long words containing the primary fragment
      if ct eq 0 || max(strlen(wordlist)) - strlen(primary) lt (minlength-1) then goto, unset
 
-     ;- bad secondary word?
-     secondary = get_secondary_words(new_board, new_tiles, position, direction, count = ct)
-     for j = 0, ct - 1, 1 do if ~is_word(secondary[j]) then goto, unset
+     ;- have we played a blank?
+     bpos = strpos(primary, '.')
+     isBlank = bpos ne -1
+     if isBlank then begin
+        assert, total(new_board eq '.') eq 1
+        blank_options = strmid(options, bpos, 1)
+        blank_options = blank_options[uniq(blank_options, sort(blank_options))]
+        blank_options = strupcase(blank_options)
+     endif else blank_options = new_board[npos]
+
+     ;- loop over possible plank values (only 1 iteration
+     ;- if not a blank)
+     for bb = 0, n_elements(blank_options) - 1, 1 do begin
+        assert, blank_options[bb] ne ''
+        new_board[npos] = blank_options[bb]
+        if isBlank then strput, primary, blank_options[bb], bpos
+
+        ;- bad secondary word?
+        secondary = get_secondary_words(new_board, new_tiles, position, direction, count = ct)
+        skip = 0
+        for j = 0, ct - 1, 1 do if ~is_word(secondary[j]) then skip=1
+        if skip then continue
      
-     ;- so far so good. is this a valid placement?
-     if minlength le 1 && is_word(primary) then begin
-        ;- add this valid move to the bestlist
-        score = score_turn(new_board, new_tiles)
-        if keyword_set(hand) then begin
-           if n_elements(tiles) eq 1 then score += hand_strength() $
-           else score += hand_strength(tiles[1:*])
+        ;- so far so good. is this a valid placement?
+        if minlength le 1 && is_word(primary, wordlist = options) then begin
+           ;- add this valid move to the bestlist
+           score = score_turn(new_board, new_tiles)
+           if keyword_set(hand) then begin
+              if n_elements(tiles) eq 1 then score += hand_strength() $
+              else score += hand_strength(tiles[1:*])
+           endif
+           assert, finite(score)
+           best_board->add, score, new_board
         endif
-        assert, finite(score)
-        best_board->add, score, new_board
-     endif
      
-     ;- recurse on next tile placement
-     if ntile ge 2 then get_best_move_fixed, new_board, tiles[1:*], $
-                                             position, direction, minlength-1, $
-                                             1 * new_tiles, best_board, wordlist = options, $
-                                             hand = hand
+        ;- recurse on next tile placement
+        if ntile ge 2 then get_best_move_fixed, new_board, tiles[1:*], $
+                                                position, direction, minlength-1, $
+                                                1 * new_tiles, best_board, wordlist = options, $
+                                                hand = hand
+     endfor ;- loop over blank options
 
      ;- unplace the tile, restore original tile order
      unset:

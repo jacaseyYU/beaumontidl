@@ -37,7 +37,10 @@ pro play_game, hand = hand
      if nheld ne 0 || n_elements(draw) ne 0 then p1_letters = append(held, draw) $
      else isDone = 1
      hit = where(p1_letters ne '', ct)
-     if ct ne 0 then p1_letters = p1_letters[hit] else isDone = 1
+     if ct ne 0 then p1_letters = p1_letters[hit] else begin
+        p1_letters=''
+        break
+     endelse
 
      assert, size(p1_letters, /tname) eq 'STRING' && n_elements(p1_letters) le 7
 
@@ -52,7 +55,10 @@ pro play_game, hand = hand
      if nheld ne 0 || n_elements(draw) ne 0 then p2_letters = append(held, draw) $
      else isDone = 1
      hit = where(p2_letters ne '', ct)
-     if ct ne 0 then p2_letters = p2_letters[hit] else isDone = 1
+     if ct ne 0 then p2_letters = p2_letters[hit] else begin
+        p2_letters=''
+        break
+     endelse
 
      assert, size(p2_letters, /tname) eq 'STRING' && n_elements(p2_letters) le 7
 
@@ -62,6 +68,17 @@ pro play_game, hand = hand
                  score1 = total(p1.score), score2 = total(p2.score)
 ;     stop
   endwhile
+  draw_board, board, hand1 = p1_letters, hand2 = p2_letters, $
+              score1 = total(p1.score), score2 = total(p2.score)
+
+  ;- a player has gone out. calculate finishing bonus
+  s1 = total(p1.score)
+  s2 = total(p2.score)
+  turn++
+  finish_bonus, strjoin(p1_letters), s1, strjoin(p2_letters), s2
+  p1[turn].score=s1-total(p1.score)
+  p2[turn].score=s2-total(p2.score)
+
   ;- save results
   files = file_search('saved_games/*.sav', count = ct)
   char = keyword_set(hand) ? '_H':''

@@ -22,7 +22,7 @@
 function place_tiles, old_board, tiles, $
                       pos, direction, $
                       new_board, new_tiles
-  
+                      
   new_board = old_board
   new_tiles = bytarr(15, 15)
   

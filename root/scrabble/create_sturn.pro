@@ -7,7 +7,9 @@ function create_sturn, board, tiles, new_board
   ;- find un-played tiles
   held = tiles
   for i = 0, ct - 1, 1 do begin
-     p = where(held eq new_board[hit[i]])
+     char = byte(new_board[hit[i]])
+     if char ge byte('A') and char le byte('Z') then char='.' else char = string(char)
+     p = where(held eq char)
      held[p[0]] = '0'
   endfor
   not_played = where(held ne '0', np_ct, complement = played, ncomp = p_ct)
