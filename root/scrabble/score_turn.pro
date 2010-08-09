@@ -15,11 +15,12 @@
 ;
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
+;  August 7 2010: Changed how blanks are handeled. cnb.
 ;-
 function score_word_horizontal, board, new_tiles, pos, debug = debug
 
   compile_opt idl2
-  common scrabble_board, letters, words, blanks
+  common scrabble_board, letters, words
   if n_elements(letters) eq 0 then create_board
 
   assert, board[pos[0], pos[1]] ne ''
@@ -46,7 +47,6 @@ function score_word_horizontal, board, new_tiles, pos, debug = debug
   if total(new_tiles[cols[0]:cols[1], row]) eq 0 then return, 0
   if keyword_set(debug) then print, 'Scoring word '+strjoin(ls)
   letter_bonus = (letters[cols[0]:cols[1], row] * new_tiles[cols[0]:cols[1], row]) > 1
-  letter_bonus *= (1 - blanks[cols[0]:cols[1], row])
   word_bonus = (words[cols[0]:cols[1], row] * new_tiles[cols[0]: cols[1], row]) > 1
   if keyword_set(debug) then begin
      print, 'word: '+strjoin(ls)
@@ -76,7 +76,7 @@ end
 ;-
 function score_word_vertical, board, new_tiles, pos, debug = debug
   compile_opt idl2
-  common scrabble_board, letters, words, blanks
+  common scrabble_board, letters, words
   if n_elements(letters) eq 0 then create_board
 
   assert, board[pos[0], pos[1]] ne ''
@@ -110,7 +110,6 @@ function score_word_vertical, board, new_tiles, pos, debug = debug
   ls = reform(board[col, rows[0]:rows[1]])
   if ~is_word(strjoin(reform(ls))) then return, !values.f_nan
   letter_bonus = (letters[col, rows[0]:rows[1]] * new_tiles[col, rows[0]:rows[1]]) > 1
-  letter_bonus *= (1 - blanks[col, rows[0]:rows[1]])
   word_bonus = (words[col, rows[0]:rows[1]] * new_tiles[col, rows[0]:rows[1]]) > 1
   if keyword_set(debug) then begin
      print, 'scoring word '+strjoin(ls)
@@ -169,7 +168,7 @@ function score_turn, board, new_tiles, debug = debug
         if keyword_set(debug) then print, result
      endfor
 
-  endif else message, 'invalid tile placement'
+  endif else return, !values.f_nan ;- invalid tile placement
   if total(new_tiles) eq 7 then result += 35
   return, result
 end

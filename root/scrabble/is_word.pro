@@ -22,30 +22,34 @@
 ;
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
+;  August 7 2010: Ignore case of input word. cnb.
 ;-
 function is_word, word, matches = matches, wordlist = wordlist
   if strlen(word) eq 1 then return, 0
+  inWord = strlowcase(word)
   matches = ''
 
   common scrabble, dictionary, letter_freq, len_ri
   if n_elements(dictionary) eq 0 then read_dictionary
  
   ;- do we have any blanks?
-  pos = strpos(word, '.')
+  pos = strpos(inWord, '.')
   if pos eq -1 then begin
      ;- no - just search for word
      if keyword_set(wordlist) then begin
-        ind = value_locate(wordlist, word)
-        return, wordlist[[ind]] eq word
+        if n_elements(wordlist) eq 1 then $
+           return, wordlist[0] eq inWord
+        ind = 0 > value_locate(wordlist, inWord) < (n_elements(wordlist)-1)
+        return, wordlist[[ind]] eq inWord
      endif else begin
-        ind = value_locate(dictionary, word)
-        return, dictionary[[ind]] eq word
+        ind = 0 > value_locate(dictionary, inWord) < (n_elements(dictionary)-1)
+        return, dictionary[[ind]] eq inWord
      endelse
   endif else begin
 
      ;- find the first and last possible position in dictionary
      ;- corresponding to the word with blanks
-     first = word & last = word
+     first = inWord & last = inWord
      pos1 = pos
      while pos ne -1 do begin
         strput, first, 'a', pos
@@ -53,24 +57,21 @@ function is_word, word, matches = matches, wordlist = wordlist
         pos = strpos(first, '.')
      endwhile
      
-     ;- this bracket of words is too large if the first
-     ;- letter is blank. In that case, use winnow_word.
-     ;if pos1 eq 0 && ~keyword_set(wordlist) $
-     ;then d = winnow_words(word) else begin
-        if keyword_set(wordlist) then begin
+     if keyword_set(wordlist) then begin
+        if n_elements(wordlist) eq 1 then d = wordlist else begin
            lo = value_locate(wordlist, first) > 0
            hi = value_locate(wordlist, last) < (n_elements(wordlist) - 1)
            d = wordlist[lo:hi]
-        endif else begin
-           len = strlen(first)
-           d = dictionary[len_ri[len_ri[len] : len_ri[len+1]-1]]
-           lo = 0 > value_locate(d, first) < (n_elements(dictionary) - 1)
-           hi = 0 > value_locate(d, last) < (n_elements(dictionary) - 1)
-           d = d[lo:hi]
         endelse
-     ;endelse
-
-     result = stregex(d, '^'+word+'$', /fold, /boolean)
+     endif else begin
+        len = strlen(first)
+        d = dictionary[len_ri[len_ri[len] : len_ri[len+1]-1]]
+        lo = 0 > value_locate(d, first) < (n_elements(dictionary) - 1)
+        hi = 0 > value_locate(d, last) < (n_elements(dictionary) - 1)
+        d = d[lo:hi]
+     endelse
+     
+     result = stregex(d, '^'+inWord+'$', /fold, /boolean)
      hit = where(result, count)
 
      if count ne 0 then matches = d[hit]

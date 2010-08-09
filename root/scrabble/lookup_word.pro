@@ -13,6 +13,8 @@
 ;            large) dictionary with a more restrictive subset (e.g.,
 ;            from winnow_words, or previous calls to this function).
 ;  count: On output, the number of words returned
+;  anchor: Set to 1 to indicate that fragment occurs at the beginning
+;          of all valid matches
 ;
 ; OUTPUTS:
 ;  A list of candidate words containing fragment and some combination
@@ -29,7 +31,8 @@
 function lookup_word, fragment, $
                       single = single, $
                       wordlist = wordlist, $
-                      count = count
+                      count = count, $
+                      anchor = anchor
 
 
   common scrabble, dictionary, letter_freq, len_ri
@@ -39,7 +42,7 @@ function lookup_word, fragment, $
 
   if keyword_set(single) then single = is_word(word, wordlist = wordlist)
 
-  regex=word
+  regex=keyword_set(anchor) ? '^'+word : word
 
   ;- choose the dictionary, and run stregex
   if keyword_set(wordlist) then begin
