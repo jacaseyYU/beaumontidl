@@ -47,16 +47,32 @@ function scrabble_event, event
         endif
      end
      state.ai: begin
-        widget_control, state.tiles, get_value=tiles
+        widget_control, state.letters, get_value=tiles
         tiles = tiles[0]
         len = strlen(tiles)
         t = strarr(len)
         for i = 0, len - 1, 1 do t[i] = strmid(tiles, i,1)
         best = get_best_move(state.board, t)
-        state.board = best->fetch_best()
+        state.board = best->fetch_best(score = s)
+        widget_control, state.ai_score, set_value=string(s, format='(i0)')
         obj_destroy, best
      end
-     state.reset:state.board[*]=''
+     state.reset:begin
+        response = dialog_message('Really Reset?', /default_no, /question)
+        if response eq 'Yes' then state.board[*]=''
+     end
+     state.save:begin
+        file = dialog_pickfile(/write, default_extension='sav', filter='*.sav', $
+                              /overwrite_prompt)
+        if file ne '' then save, state, file=file
+     end
+     state.restore:begin
+        file = dialog_pickfile(/read, filter='*.sav')
+        state_bak = state
+        if file ne '' then restore, file
+        state_bak.board = state.board
+        state=state_bak
+     end
      state.scramble:begin
         widget_control, state.letters, get_value=v
         v = v[0]
@@ -134,7 +150,9 @@ function scrabble, parent
   r2 = widget_base(base, /row)
   r3 = widget_base(base, /row)
   r4 = widget_base(base, /row)
-  
+  r5 = widget_base(base, /row)
+  r6 = widget_base(base, /row)
+
   temp = widget_label(r1, value= 'Player 1 Score:', font=font)
   score1 = widget_label(r1, value=' 0   ', font=font)
   temp = widget_label(r2, value = 'Player 2 Score:', font=font)
@@ -146,10 +164,17 @@ function scrabble, parent
   scramble = widget_button(r4, value='Scramble')
   reset = widget_button(r4, value='Reset')
 
+  save = widgeT_button(r5, value='Save')
+  restore = widget_button(r5, value='Restore')
+
+  score_label = widget_label(r6, value='AI Score')
+  score_text = widget_label(r6, value='     ')
+
   game_board = strarr(15, 15)
   info = {wid:board, score1:score1, score2:score2, letters:tiles, $
           board:game_board, x:7, y:7, p:!p, ai:ai, reset:reset, $
-          dir:0B, scramble:scramble}
+          dir:0B, scramble:scramble, save:save, restore:restore, $
+          ai_score: score_text}
   child = widget_info(tlb, /child)
   widget_control, child, set_uvalue = info, /no_copy
   return, tlb
@@ -159,3 +184,13 @@ function scrabble, parent
 ;  xmanager, 'scrabble', tlb
 end
   
+pro test_event, event
+
+end
+pro test
+
+  tlb = widget_base()
+  s = scrabble(tlb)
+  widget_control, tlb, /realize
+  xmanager, 'test', tlb
+end
