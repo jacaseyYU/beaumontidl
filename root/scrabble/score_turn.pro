@@ -169,7 +169,9 @@ function score_turn, board, new_tiles, debug = debug
      endfor
 
   endif else return, !values.f_nan ;- invalid tile placement
-  if total(new_tiles) eq 7 then result += 35
+  isBingo = total(new_tiles) eq 7
+  bingoBonus = 50
+  if isBingo then result += bingoBonus
   return, result
 end
 

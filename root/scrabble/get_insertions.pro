@@ -137,4 +137,5 @@ pro get_insertions, board, indices, directions, minlengths, count = count
   indices = array_indices(board, ind)
   directions = dir
   minlengths = min
+  count = n_elements(directions)
 end
