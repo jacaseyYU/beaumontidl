@@ -49,9 +49,7 @@
 ;-
 
 pro cw_drawcube_destroy, id
-  child = widget_info(id, /child)
-  if child eq 0 then return
-  widget_control, child, get_uvalue = state, /no_copy
+  widget_control, id, get_uvalue = state, /no_copy
   ptr_free, state.data
 end
 
@@ -123,6 +121,8 @@ function cw_drawcube_event, ev
   child = widget_info(ev.handler, /child)
   widget_control, child, get_uvalue= state, /no_copy
 
+  drawcube_resize, ev.top, state
+
   ;- which widget generated the event?
   case ev.id of
      state.yz: return, cw_drawcube_draw_event(ev, child, state)
@@ -139,6 +139,31 @@ function cw_drawcube_event, ev
   ;-swallow the event
   return, 0
 end
+
+
+pro drawcube_resize, id, state
+  g = widget_info(id, /geometry)
+  print, g.scr_xsize, g.scr_ysize
+  if g.scr_xsize eq state.scr_xsize && $
+     g.scr_ysize eq state.scr_ysize then return
+
+  gx = widget_info(state.yz, /geometry)
+  widget_control, state.yz, draw_xsize = g.scr_xsize / 3.1, $
+                  draw_ysize = g.scr_xsize / 3.1 * (1. * gx.scr_ysize / gx.scr_xsize)
+
+  gy = widget_info(state.xz, /geometry)
+  widget_control, state.xz, draw_xsize = g.scr_xsize / 3.1, $
+                  draw_ysize = g.scr_xsize / 3.1 * (1. * gy.scr_ysize / gy.scr_xsize)
+
+  gz = widget_info(state.xy, /geometry)
+  widget_control, state.xy, draw_xsize = g.scr_xsize / 3.1, $
+                  draw_ysize = g.scr_xsize / 3.1 * (1. * gz.scr_ysize / gz.scr_xsize)
+
+  state.scr_xsize = g.scr_xsize
+  state.scr_ysize = g.scr_ysize
+end
+
+                  
 
 
 pro drawcube_update_widgets, state, mask = mask, _extra = extra
@@ -204,12 +229,10 @@ function cw_drawcube, data, parent, uvalue = uvalue
   if hasParent then $
      tlb = widget_base(parent, row=1, func_get_value='cw_drawcube_get_val', $
                        pro_set_value='cw_drawcube_set_val', event_func='cw_drawcube_event', $
-                       kill_notify = 'cw_drawcube_destroy', $
                        uvalue = uvalue) $
   else $
      tlb = widget_base(row=1, func_get_value='cw_drawcube_get_val', $
                        pro_set_value='cw_drawcube_set_val', event_func='cw_drawcube_event', $
-                       kill_notify = 'cw_drawcube_destroy', $
                        uvalue = uvalue) 
 
   c1 = widget_base(tlb, col=1)
@@ -240,9 +263,11 @@ function cw_drawcube, data, parent, uvalue = uvalue
             xslide: xslide, yslide: yslide, zslide: zslide, $
             xz: xzd, yz: yzd, xy: xyd, $
             black: black, white: white, $
-            min: black, max:white, drag: 0B}
+            min: black, max:white, drag: 0B, $
+            scr_xsize:0, scr_ysize:0}
 
   child = widget_info(tlb, /child)
+  widget_control, child, kill_notify='cw_drawcube_destroy'
   widget_control, child, set_uvalue = state, /no_copy
 
   return, tlb
@@ -269,7 +294,7 @@ pro test
   data *= rebin(mask, sz[1], sz[2], sz[3])
 
   tlb = widget_base()
-  draw = cw_drawcube(tlb, data)
+  draw = cw_drawcube(data, tlb)
 
   widget_control, tlb, /realize
   xmanager, 'test', tlb, event_handler='test_event'
