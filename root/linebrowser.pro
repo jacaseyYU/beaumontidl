@@ -68,9 +68,12 @@ pro linebrowser_update, ptr
 end
 
 
-function linebrowser_parse, file, status = status, fhi = fhi, flo = flo
+function linebrowser_parse, file, status = status, fhi = fhi, flo = flo, $
+                            verbose = verbose
   status = -1
   testing = 0
+  doprint = keyword_set(verbose)
+
   wsp = ' '+string(9B)
 
   ;- read in data
@@ -83,13 +86,20 @@ function linebrowser_parse, file, status = status, fhi = fhi, flo = flo
   ;-molecular weight
   if testing then print, 'weight'
   hit = where(strmatch(data, '!MOLECULAR WEIGHT*'), ct)
-  if ct eq 0 then return, -1
+  if ct eq 0 then begin
+     if doprint then print, 'no molecular weight'
+     return, -1
+  endif
+
   weight = float(data[hit+1])
 
   ;-number of levels, energies, and statistical weights
   if testing then print, 'energy levels'
   hit = where(strmatch(data, '*NUMBER OF ENERGY LEVELS*'), ct)
-  if ct eq 0 then return, -1
+  if ct eq 0 then begin
+     if doprint then print, 'No energy levels'
+     if ct eq 0 then return, -1
+  endif
   nlev = fix(data[hit+1])
   energy = fltarr(nlev)
   g = fltarr(nlev)
@@ -105,7 +115,11 @@ function linebrowser_parse, file, status = status, fhi = fhi, flo = flo
   ;- number of transitions
   hit = where(strmatch(data, '*NUMBER OF RADIATIVE TRANSITIONS*'), ct)
   if testing then print, 'radiative transitions'
-  if ct eq 0 then return, -1
+  if ct eq 0 then begin
+     if doprint then print, 'Transition error'
+     if ct eq 0 then return, -1
+  endif
+
   ntran = fix(data[hit+1])
   r_hi = strarr(ntran)
   r_lo = strarr(ntran)
@@ -122,7 +136,11 @@ function linebrowser_parse, file, status = status, fhi = fhi, flo = flo
      ex_temp[i] = split[5]
   endfor
   good = where(freq gt flo and freq lt fhi, ct)
-  if ct eq 0 then return, -1 else begin
+  if ct eq 0 then begin
+     if doprint then print, 'no transitions in correct frequency'
+     if doprint then print, freq
+     return, -1 
+  endif else begin
      r_hi = r_hi[good]
      r_lo = r_lo[good]
      a = a[good]
@@ -133,10 +151,16 @@ function linebrowser_parse, file, status = status, fhi = fhi, flo = flo
   ;-XXX only deal with one collisional partner for now
   if testing then print, 'collisional transitions'
   hit = where(strmatch(data, '!NUMBER OF COLL TRANS*'), ct)
-  if ct eq 0 then return, -1
+  if ct eq 0 then begin
+     if doprint then print, 'Coll trans'
+     return, -1
+  endif
   ntrans = fix(data[hit[0]+1])
   hit = where(strmatch(data, '!NUMBER OF COLL TEMPS*'), ct)
-  if ct eq 0 then return, -1
+  if ct eq 0 then begin
+     if doprint then print, 'Coll temps'
+     return, -1
+  endif
   ntemp = fix(data[hit[0]+1])
   c_hi = strarr(ntrans)
   c_lo = strarr(ntrans)
@@ -169,6 +193,8 @@ function linebrowser_parse, file, status = status, fhi = fhi, flo = flo
             temp : temp, $
             c : c, $
             data : data}
+  if doprint then print, 'success'
+  if doprint then help, result, /struct
   return, result
 end
 
@@ -190,7 +216,13 @@ pro linebrowser, flo = flo, fhi = fhi
      good[i] = (s ne -1)        
 ;     if s eq -1 then print, 'parse error: skipping '+names[i]
   endfor
-  data = linebrowser_parse(files[0], status = s, flo = flo, fhi = fhi)
+  keep = where(good, keep_ct)
+  if keep_ct eq 0 then begin
+     print, 'No transitions in requested frequency range. Aborting'
+     return
+  endif
+  files = files[keep]
+  data = linebrowser_parse(files[0], status = s, flo = flo, fhi = fhi, /verbose)
 
   hit = where(good, ct)
   files = files[hit] & names = names[hit]

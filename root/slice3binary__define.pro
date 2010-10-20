@@ -7,8 +7,11 @@ function slice3binary::event, event
   endif else if event.id eq self.open then begin
      self->io, /open
      return, 0
+  endif else if event.id eq self.reset then begin
+     (*self.mask)[*] = 0
+     self->update_images
   endif
-  
+
   ;- shift-clicking means no marking
   if tag_names(event, /struct) ne 'PZWIN_EVENT' || $
      (event.modifiers and 1) ne 0 then return, result
@@ -20,12 +23,15 @@ function slice3binary::event, event
   
   if valid && (de.LEFT_CLICK || de.LEFT_DRAG) then begin
      (*self.mask)[coords[0], coords[1], coords[2]] = erase ? 0 : 1
+     self.mask_obj->deltadraw, de.x, de.y, (erase ? 0 : 1)
   endif
 
-  if valid && (de.RIGHT_CLICK || de.RIGHT_DRAG) then $
+  if valid && (de.RIGHT_CLICK || de.RIGHT_DRAG) then begin
      (*self.mask)[coords[0], coords[1], coords[2]] = erase ? 0 : 2
+     self.mask_obj->deltadraw, de.x, de.y, (erase ? 0 : 2)
+  endif
 
-  self->update_images
+  self->redraw
   return, result
 end
 
@@ -38,6 +44,7 @@ pro slice3binary::io, save = save, open = open
      mask = *self.mask
      save, mask, file=file
   endif else if keyword_set(open) then begin
+     if ~file_test(file) then return
      old_sz = size(*self.mask)
      restore, file
 
@@ -53,26 +60,34 @@ pro slice3binary::io, save = save, open = open
 
      ;- update mask, and redraw
      *self.mask = mask
-     self->redraw
+     self->update_images
   endif
+end
+
+pro slice3binary::cleanup
+  self->slice3::cleanup
+  ptr_free, self.mask
+  obj_free, self.mask_obj
 end
 
 function slice3binary::init, cube, slice = slice, $
                     group_leader = group_leader, $
                     widget_listener = widget_listener, $
                     _extra = extra
-
+  print, 'superclass'
   ;- Initialize superclass
   junk = self->slice3::init(cube, slice = slice, $
                       group_leader = group_leader, $
                       widget_listener = widget_listener, $
                       _extra = extra)
-
+  print, 'io buttons'
   ;- I/O buttons
   button_base = widget_base(self.base, row = 1)
   self.save = widget_button(button_base, value='Save')
   self.open = widget_button(button_base, value='Open')
+  self.reset = widget_button(button_base, value='Reset')
 
+  print, 'mask'
   ;- set up blank mask of data
   isPtr = size(cube, /type) eq 10
   if isPtr then mask = byte(*cube * 0) else $
@@ -80,7 +95,9 @@ function slice3binary::init, cube, slice = slice, $
 
   self.mask = ptr_new(mask, /no_copy)
   self.mask_obj = obj_new('CNBgrMask', self.mask, $
-                          color=[[0,255,0],[255,0,0]], alpha=.9, blend=[3,4])
+                          color=[[0,255,0],[255,0,0]], alpha=.9, blend=[3,4], $
+                          slice = slice)
+  print, 'adding model'
   self.model->add, self.mask_obj
   widget_control, self.base, set_uvalue = self
 
@@ -95,11 +112,12 @@ pro slice3binary__define
         mask:ptr_new(), $
         mask_obj:obj_new(), $
         save:0L, $
-        open:0L}
+        open:0L, $
+        reset:0L }
 end
 
 pro test
   data = randomn(seed, 64, 64, 64)
-  s = obj_new('slice3binary', data)
+  s = obj_new('slice3binary', data, slice = 1)
   s->run
 end

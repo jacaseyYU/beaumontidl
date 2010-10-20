@@ -160,12 +160,24 @@ end
 ;+
 ; convert a idl save file to a list of feature vectors
 ;-
-function mask2feature, mask, label = label, bin = bin, $
-                       featurefunction = featurefunction, norm = norm
-  common svmdata, data, h
-  if n_elements(data) eq 0 then read_data
+function mask2feature, maskfile, label = label, bin = bin, $
+                       featurefunction = featurefunction, norm = norm, $
+                       data = data, mask = mask, help=help
+  common svmdata, d, h  
 
-  restore, mask
+  if keyword_set(help) || n_params() eq 0 && n_elements(mask) eq 0 then begin
+     print, 'calling sequence:'
+     print, ' result = mask2feature(maskfile, [label = label, bin = bin,'
+     print, '            featurefunction=string, /norm, data=data, mask=mask)'
+     return, -1
+  endif
+
+  if n_elements(data) eq 0 then begin
+     if n_elements(d) eq 0 then read_data
+     data = d
+  endif
+
+  if n_elements(mask) eq 0 then restore, maskfile
 
   ;- trim off the edges
   sz = size(mask)

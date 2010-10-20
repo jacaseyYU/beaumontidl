@@ -88,7 +88,6 @@ end
 pro pzwin::request_redraw, debug = debug
   self.redraw = 1
   if keyword_set(debug) then begin
-     print, 'redraw', self.redraw
      self.debug = 1
   endif
 end
@@ -110,6 +109,10 @@ function pzwin::event, event
      self.redraw = 1
   endif
 
+  outside = event.x lt 0 || event.y lt 0 || $
+            event.x ge g.scr_xsize || $
+            event.y ge g.scr_ysize
+  
   junk = win->pickdata(self.view, self.model, [event.x, event.y], $
                        xyz)
   
@@ -125,6 +128,7 @@ function pzwin::event, event
      end
      2: begin                   ;- mouse motion
         if ~self.l_drag && ~self.r_drag then break
+        if outside then break
         if (self.modifiers ne 0) && $
            (event.modifiers and self.modifiers) eq 0 then break
 
@@ -137,11 +141,13 @@ function pzwin::event, event
         ;- right mouse drag stretches an image
         endif else if self.r_drag && self.isImage then begin
            g = widget_info(self.draw, /geom)
-           black = 1. * event.x / g.scr_xsize
-           white = black + (1 - black) * event.y / g.scr_ysize
-           self.image->set_stretch, black = black, white = white, /norm
+           bias = 0 > (1. * event.x / g.scr_xsize) < 1
+           contrast = 0 > (1. * event.y / g.scr_ysize) < 1
+           self.image->set_stretch, bias = bias, contrast = contrast
         endif
      end
+     5: ;-keyboard release
+     6: ;-keyboard release
      7: begin                   ;- wheel motion
         self.redraw = 1
         zoomIn = event.clicks gt 0
@@ -152,14 +158,14 @@ function pzwin::event, event
 
   result = {pzwin_event, ID: event.handler, TOP: event.top, HANDLER:0L, $
             x:xyz[0], y:xyz[1], $
-            LEFT_CLICK: event.press eq 1, $
+            LEFT_CLICK: event.type eq 0 && event.press eq 1, $
             LEFT_DRAG: event.press eq 0 && self.l_drag, $
-            LEFT_RELEASE: event.release eq 1, $
-            RIGHT_CLICK: event.press eq 4, $
+            LEFT_RELEASE: event.type eq 1 && event.release eq 1, $
+            RIGHT_CLICK: event.type eq 0 && event.press eq 4, $
             RIGHT_DRAG: event.press eq 0 && self.r_drag, $
-            RIGHT_RELEASE: event.release eq 4, $
+            RIGHT_RELEASE: event.type eq 1 && event.release eq 4, $
             press:event.press, type:event.type, release:event.release, $
-            modifiers:event.modifiers}
+            modifiers:event.modifiers, ch:event.ch, key:event.key}
 
   return, result
 end
@@ -261,6 +267,7 @@ end
 
 function pzwin::init, model, parent, standalone = standalone, $
                       xrange = xrange, yrange = yrange, image = image, $
+                      keyboard_events = keyboard_events, $
                       _extra = extra
   
   ;- set up view
@@ -279,12 +286,12 @@ function pzwin::init, model, parent, standalone = standalone, $
      base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize')
   endelse
 
-  ratio = wid[1] / wid[0]
+  ratio = 1. * wid[1] / wid[0]
   if ratio gt 1 then begin
      xsize = 500
-     ysize = 500 / ratio
+     ysize = 500 * ratio
   endif else begin
-     xsize = 500 * ratio
+     xsize = 500 / ratio
      ysize = 500
   endelse
   if ~keyword_set(image) then begin
@@ -292,7 +299,8 @@ function pzwin::init, model, parent, standalone = standalone, $
   endif
   
   draw = widget_draw(base, xsize = xsize, ysize = ysize, graphics_level = 2, $
-                     /button_events, /wheel_events, /motion_events)
+                     /button_events, /wheel_events, /motion_events, $
+                     keyboard_events = keyword_set(keyboard_events) ? 2 : 0)
   self.model = model
   self.view = view
   self.draw = draw
@@ -321,23 +329,23 @@ end
 pro pzwin__define
 
   data = {pzwin, $
-          model:obj_new('IDLgrModel'), $ ;- Model object. Provided on input
-          view:obj_new('IDLgrView'), $   ;- view object. Created during init
-          draw:0L, $                     ;- draw widget id. value -> draw object
-          base:0L, $                     ;- root of the pzwin widget hierarchy
-          parent:0L, $                   ;- widget into which pzwin is embedded (or base)
-          base_sz:[0., 0.], $            ;- size of base widget
-          view_cen:[0.,0.], $            ;- center of viewport, in data coords
-          view_wid:[0.,0.], $            ;- width of viewport, in data coords
-          l_drag:0B, $                   ;- left dragging?
-          r_drag:0B, $                   ;- right dragging
-          anchor:[0., 0.], $             ;- cursor pos at start of drag
-          last_render:0D, $              ;- time of last render
-          standalone:0B, $               ;- widget a standalone object?
-          isImage:0B, $                  ;- does the model object hold a CNBgrImage object?
-          image:obj_new(), $             ;- the CNBgrImage object, if isImage is true
+          model:obj_new(''), $  ;- Model object. Provided on input
+          view:obj_new(''), $   ;- view object. Created during init
+          draw:0L, $            ;- draw widget id. value -> draw object
+          base:0L, $            ;- root of the pzwin widget hierarchy
+          parent:0L, $          ;- widget into which pzwin is embedded (or base)
+          base_sz:[0., 0.], $   ;- size of base widget
+          view_cen:[0.,0.], $   ;- center of viewport, in data coords
+          view_wid:[0.,0.], $   ;- width of viewport, in data coords
+          l_drag:0B, $          ;- left dragging?
+          r_drag:0B, $          ;- right dragging
+          anchor:[0., 0.], $    ;- cursor pos at start of drag
+          last_render:0D, $     ;- time of last render
+          standalone:0B, $      ;- widget a standalone object?
+          isImage:0B, $         ;- does the model object hold a CNBgrImage object?
+          image:obj_new(), $    ;- the CNBgrImage object, if isImage is true
           debug: 0B, $
-          redraw:0B, $          ;- request for redraw command
+          redraw:0B, $           ;- request for redraw command
           modifiers:0B $         ;- a keyboard modifier filter used to ignore events
          }
 end
@@ -354,11 +362,11 @@ pro test
   yrange = [0,255]
   model->add, plot
   
-  x = obj_new('pzwin', model, image = plot, xrange=xrange, yrange = yrange, /standalone)  
+  x = obj_new('pzwin', model, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard)  
 end
 
 pro test_embed_event, ev
-  help, ev
+  help, ev, /struct
 end
 
 pro test_embed
@@ -374,7 +382,7 @@ pro test_embed
   yrange = [-1,1]
   model->add, plot
 
-  obj = obj_new('pzwin', model, pz_base, xrange=[0,11],yrange=[-1,1])
+  obj = obj_new('pzwin', model, pz_base, xrange=[0,11],yrange=[-1,1], /keyboard)
   button = widget_button(tlb, value='Hi There', xsize = 4)
 
 

@@ -30,7 +30,6 @@ function parsebetween, string, first, last
   result = obj_new('stack')
   
   while hit2 ne -1 do begin
-     print, hit, skip, hit2
      result->push, strmid(string, hit + skip, (hit2 - hit - len+1))
      hit = strpos(string, first, hit2)
      if hit eq -1 then break

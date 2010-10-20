@@ -79,7 +79,9 @@ end
 ;-
 pro slice3_kill, id
   widget_control, id, get_uvalue = obj
+  help, obj, obj_valid(obj)
   obj_destroy, obj
+  help, obj, obj_valid(obj)
 end
 
 
@@ -139,6 +141,10 @@ function slice3::event, event, draw_event = draw_event
                       HANDLER:0L, $
                       base:self.base, $
                       x:x, y:y, z:z, $
+                      ch:event.ch, $
+                      key:event.key, $
+                      press:event.press, $
+                      release:event.release, $
                       LEFT_CLICK:event.LEFT_CLICK, $
                       LEFT_DRAG:event.LEFT_DRAG, $
                       LEFT_RELEASE:event.LEFT_RELEASE, $
@@ -181,11 +187,11 @@ pro slice3::remove_image, image
   self.model->remove, image
 end
 
-pro slice3::add_image, image
+pro slice3::add_image, image, alias = alias
   widget_control, self.slider, get_value = index
   image->set_slice_index, index
 
-  self.model->add, image, /alias
+  self.model->add, image, alias = alias
   self.win->request_redraw
 end
 
@@ -206,9 +212,11 @@ function slice3::remove_graphics_atom, atom
   self.model->remove, atom
 end
 
-function slice3::cleanup
+pro slice3::cleanup
+  print, 'cleanup'
   obj_destroy, self.model
   obj_destroy, self.win
+;  widget_control, self.base, /destroy
 end
 
 function slice3::get_widget_id
@@ -222,16 +230,22 @@ function slice3::init, cube, slice = slice, group_leader = group_leader, $
   sz = size(cube)
   isPtr = size(cube, /type) eq 10
   ndim = isPtr ? size(*cube, /n_dim) : size(cube, /n_dim)
-  if ndim ne 3 then begin
-     print, 'cube must be a 3D array'
+  if ndim ne 2 && ndim ne 3 then begin
+     print, 'cube must be a 2D or 3D array'
      return, 0
   endif
+  if ndim eq 2 then self.is2D = 1
+  if ndim eq 2 and slice ne 2 then $
+     message, '2D images must set slice=2'
 
-  
   image = obj_new('CNBgrImage', cube, slice = slice, _extra = extra)
   
   sz = image->get_2d_size()
+  print, '2d size: ', sz
+
   slice_sz = image->get_slice_size()
+  print, 'slice size: ', slice_sz
+
   slice = image->get_slice()
 
   self.model = obj_new('IDLgrModel')
@@ -244,9 +258,9 @@ function slice3::init, cube, slice = slice, group_leader = group_leader, $
   self.win = obj_new('pzwin', self.model, self.draw_base, $
                      xrange = [0, sz[0]], $
                      yrange = [0, sz[1]], $
-                     image = image)
-  self.slider = widget_slider(tlb, min = 0, max = slice_sz-1, $
-                         value = slice_sz/2, /drag)
+                     image = image, /keyboard_events)
+  self.slider = widget_slider(tlb, min = 0, max = (slice_sz-1)>1, $
+                         value = slice_sz/2, /drag, sensitive = ~self.is2D)
   self.base = tlb
   widget_control, tlb, set_uvalue = self
 
@@ -262,7 +276,8 @@ pro slice3__define
           draw_base:0L, $       ;- base which holds pzwin
           model:obj_new(), $    ;- model object, holds all the image cubes
           win:obj_new(), $      ;- pzwin object
-          widget_listener:0L$   ;- a widget to which this object sends events
+          widget_listener:0L,$  ;- a widget to which this object sends events
+          is2D:0B $             ;- is the data 2D instead of 3D?
          }
 end
 
@@ -271,10 +286,9 @@ pro s_test_event, event
 end
 
 pro s_test
-  listen = widget_base()
-  im = rebin(dist(100), 100, 100, 100)
-  s = obj_new('slice3', im, slice = 2, widget_listen = listen)
+;  im = rebin(dist(100), 100, 100, 100)
+  ;- 2D case
+  im = dist(256)
+  s = obj_new('slice3', im, slice = 2)
   s->run
-  widget_control, listen, /realize
-  xmanager, 's_test', listen
 end

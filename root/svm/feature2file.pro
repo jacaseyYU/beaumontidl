@@ -1,4 +1,4 @@
-function feature2file, feature, outfile = outfile
+function feature2file, feature, outfile = outfile, names=names
   nf = n_elements(feature)
   ndim = n_elements(feature[0].feature)
   inds = findgen(ndim) + 1
@@ -18,6 +18,7 @@ function feature2file, feature, outfile = outfile
      outfile = '/tmp/feature.'+string(long(systime(/seconds)),format='(i0)')
   openw, lun, outfile, width = max(strlen(result)), /get
   openw, lun2, strtrun(outfile,'.dat')+'.csv', /get
+  if keyword_set(names) then printf, lun2, names
   printf, lun, result
   printf, lun2, result2
   free_lun, lun
