@@ -1,4 +1,4 @@
-pro cnbgrmask::restretch
+pro cnbgrmask::redraw
   case self.slice of
      0: subim = (*self.raw_data)[self.pos[0], *, *]
      1: subim = (*self.raw_data)[*, self.pos[1], *]
@@ -10,8 +10,8 @@ pro cnbgrmask::restretch
   ;- convert into 3-color via lookup
   ;- this will fail in cnbgrimage::init, so 
   ;- check for a null lookup poiter first
-
   if ~ptr_valid(self.lookup) then return
+
   result= bytarr(4, sz[1], sz[2])
   result[0,*,*] = (*self.lookup)[0, subim]
   result[1,*,*] = (*self.lookup)[1, subim]
@@ -19,6 +19,12 @@ pro cnbgrmask::restretch
   result[3,*,*] = 255 * (max(result, dim=1) ne 0) * self.alphachannel
 
   self->setproperty, data = result
+end
+
+pro cnbgrmask::deltadraw, x, y, val
+  self->getproperty, data = data
+  data[*,x,y]=[(*self.lookup)[0:2, val], (val eq 0 ? 0 : 255) * self.alphachannel]
+  self->setproperty, data = data
 end
 
 function cnbgrmask::init, mask, $
@@ -73,11 +79,15 @@ function cnbgrmask::init, mask, $
      endfor
   endfor
   self.lookup = ptr_new(lookup)
-  self->restretch
+  self->redraw
   return, 1
 end
   
-                                
+pro cnbgrmask::cleanup
+  self->cnbgrimage::cleanup
+  ptr_free, [self.colors, self.lookup]
+end
+
 pro cnbgrmask__define
   data = {CNBgrMask, inherits CNBgrImage, $
           colors: ptr_new(), $
@@ -90,7 +100,6 @@ pro test
   
   mask = cube gt 1
   mask += 2 * (randomn(seed, 64, 64, 64) gt 1)
-  print, minmax(mask)
   mptr = ptr_new(mask)
   im = obj_new('CNBgrMask', mptr, nmask=5, alpha=.8, blend=[3,4])
   im2 = obj_new('CNBgrImage', cube);, alpha=.5, blend=[3,4])
@@ -106,4 +115,5 @@ pro test
   win->draw, view
 
   obj_destroy,view
+  print, obj_valid(view), obj_valid(model), obj_valid(im), obj_valid(im2), obj_valid(win)
 end

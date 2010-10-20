@@ -36,7 +36,7 @@
 ;  SET_POS          Set the 3D location in the cube
 ;  SET_STRETCH      Set greyscale parameters
 ;  CONVERT_COORDS   Permute screen position (x,y,slice) to 3D cube position
-;  RESTRETCH        Re-generate the 2D image
+;  REDRAW        Re-generate the 2D image
 ;  INIT             Create a new image object
 ;  CLEANUP          Destroy the image and free heap variables
 ;  
@@ -65,7 +65,7 @@ end
 
 pro CNBgrImage::set_slice_index, index
   self.pos[self.slice] = 0 > index < (self.sz[self.slice] - 1)
-  self->restretch
+  self->redraw
 end
 
 function CNBgrImage::get_slice
@@ -80,26 +80,20 @@ pro CNBgrImage::set_pos, x = x, y = y, z = z
   if n_elements(x) ne 0 then self.pos[0] = 0 > x < (sz[0] - 1)
   if n_elements(y) ne 0 then self.pos[1] = 0 > y < (sz[1] - 1)
   if n_elements(z) ne 0 then self.pos[2] = 0 > z < (sz[2] - 1)
-  self->restretch
+  self->redraw
 end
 
-pro CNBgrImage::set_stretch, black = black, white = white, norm = norm
-  if keyword_set(norm) then begin
-     if n_elements(black) ne 0 then $
-        self.black = self.minmax[0] + (self.minmax[1]-self.minmax[0]) * black
-     
-     if n_elements(white) ne 0 then $
-        self.white = self.minmax[0] + (self.minmax[1]-self.minmax[0]) * white
-     
-  endif else begin
-     if n_elements(black) ne 0 then $
-        self.black = self.minmax[0] > black < self.minmax[1]
-     
-     if n_elements(white) ne 0 then $
-        self.white = self.minmax[0] > white < self.minmax[1]
-  endelse
+pro CNBgrImage::set_stretch, bias = bias, contrast = contrast, black = black, white = white, $
+                             sqrt = sqrt, log = log, linear = linear
 
-  self->restretch
+  if keyword_set(black) then self.black = black
+  if keyword_set(white) then self.white = white
+  if keyword_set(bias) then self.bias = bias
+  if keyword_set(contrast) then self.contrast = contrast
+  if keyword_set(sqrt) then self.scale='SQRT'
+  if keyword_set(log) then self.scale='LOG'
+  if keyword_set(linear) then self.scale='LINEAR'
+  self->redraw
 end
 
 function CNBgrImage::convert_coords, x, y, z, valid = valid
@@ -110,6 +104,7 @@ function CNBgrImage::convert_coords, x, y, z, valid = valid
      2: result = [x, y, z]
      else: 
   endcase
+
   if min(result) lt 0 || $
      result[0] ge self.sz[0] || $
      result[1] ge self.sz[1] || $
@@ -118,7 +113,7 @@ function CNBgrImage::convert_coords, x, y, z, valid = valid
   return, result
 end
 
-pro CNBgrImage::restretch
+pro CNBgrImage::redraw
   compile_opt idl2, hidden
 
   case self.slice of
@@ -126,13 +121,41 @@ pro CNBgrImage::restretch
      1: subim = (*self.raw_data)[*, self.pos[1], *]
      2: subim = (*self.raw_data)[*, *, self.pos[2]]
   endcase
-  if ~self.noscale then begin
-     subim = self.black > reform(subim,/over) < self.white
-     subim = byte( (subim - self.black) * 255. / (self.white - self.black))
-  endif else subim = byte(reform(subim))
+  if self.noscale then begin
+     subim = byte(subim)
+  endif else begin
+     ;-ds9-like scaling
+     ;- map data values onto the range [0,1]
+     case self.scale of
+        'LINEAR': begin
+           subim = 0 > ((subim - self.black) / (self.white - self.black)) < 1
+        end
+        ;- XXX need to handle negative values
+        'SQRT': begin
+           subim = 0 > ((sqrt(subim) - sqrt(self.black>0)) / (sqrt(self.white) - sqrt(self.black>0))) < 1
+        end
+        'LOG': begin
+           hit = where(subim gt 0, ct)
+           min = ct eq 0 ? 1d-5 :  min(subim[hit])
+           subim = 0 > ((alog(subim) - alog(self.black > min)) / (alog(self.white) - alog(self.black > min))) < 1
+        end
+        else: message, 'unexpected scaling method'
+     endcase
 
+     ;- map onto black-white ramp
+     ;- picture a graph: xaxis is (scaled) data. yaxis is greyscale
+     ;- function is a line which passes through bias at y=0, at
+     ;- an angle = pi/2 - contrast * pi
+     ;- limits of y are [-1, 1]
+     theta = !pi/2 - self.contrast * !pi
+     subim = -1 > ((subim - self.bias) * tan(theta)) < 1
+
+     ;- finally, map -1,1 to 0,255
+     subim = byte((subim + 1) * 127.5)
+
+  endelse
   sz = size(subim)
-
+  
   ;- convert to 3 color
   result = bytarr(4, sz[1], sz[2])
   result[0,*,*] = self.sh_color[0] * subim
@@ -164,13 +187,11 @@ function CNBgrImage::init, data, $
      dataPtr = ptr_new(data)
      dataVal = data
   endelse
-
+  help, dataval
   sz = size(dataVal)
   ndim = size(dataVal, /n_dim)
   if ndim eq 2 then sz[3] = 1
 
-  s = sort(dataVal)
-  
   if n_elements(pos) eq 0 then pos = sz[1:3]/2 else begin
      if n_elements(pos) eq 2 then pos = [pos, 0]
      if n_elements(pos) ne 3 then $
@@ -183,25 +204,42 @@ function CNBgrImage::init, data, $
   default_slice = ndim eq 2 ? 2 : 0
   if n_elements(slice) eq 0 then slice = default_slice else begin
      if slice ne 0 && slice ne 1 && slice ne 2 then $
-        message, 'slice must be 0,1, or 2'
+        message, 'slice must be 0, 1, or 2'
   endelse
 
-  nfin = total(finite(dataVal))
-  val = dataVal[s[[.1, .9] * nfin]]
-  if n_elements(black) eq 0 then black = val[0]
-  if n_elements(white) eq 0 then white = val[1]
-  if ~keyword_set(color) then color = [1., 1., 1.]
+  big = n_elements(dataVal) gt 1e6
+  if big then begin
+     hit = where(dataVal ne 0, ct)
+     rand = randomu(seed, 1e5) * ct
+     sub = dataVal[hit[rand]]
+     med = median(sub) & sig = medabsdev(sub, /sigma)
+  endif else begin
+     hit = where(dataVal ne 0, ct)
+     if ct ne 0 then begin
+        med = median(dataVal[hit]) & sig = medabsdev(dataVal[hit], /sigma)
+     endif else begin
+        med = median(dataVal) & sig = medabsdev(dataVal, /sigma)
+     endelse
+  endelse
   
+  if n_elements(black) eq 0 then black = med - 5 * sig
+  if n_elements(white) eq 0 then white = med + 5 * sig
+  if ~keyword_set(color) then color = [1., 1., 1.]
+  help, dataVal
+
   self.minmax = minmax(dataVal, /nan)
   self.black = black
   self.white = white
+  self.bias = 0.5
+  self.contrast = .25
+  self.scale='LINEAR'
   self.raw_data = dataPtr
   self.sz = sz[1:3]
   self.pos = pos
   self.slice = slice
   self.sh_color = color
   self.noscale = keyword_set(noscale)
-  self->restretch
+  self->redraw
  
   return, 1
 end
@@ -209,6 +247,7 @@ end
 pro CNBgrImage::cleanup
   self->IDLgrImage::cleanup
   ptr_free, self.raw_data
+  assert, ~ptr_valid(self.data)
   ptr_free, self.data
 end
 
@@ -219,8 +258,11 @@ pro CNBgrImage__define
           pos: fltarr(3), $      ;- position in the cube
           slice:0, $             ;- dimension of slicing
           noscale:0B, $          ;- Ignore greyscale parameters?
+          scale: '', $           ;- name of scaling function. LINEAR, LOG, or SQRT
           black:0., $            ;- data value of black
           white:0., $            ;- data value of white
+          bias:0., $             ;- greyscale bias (normalized value of middle grey)
+          contrast:0., $         ;- contrast (ramp from black to white). 0-1
           sh_color:fltarr(3), $  ;- tint of the image (RGB triplet)
           minmax: fltarr(2) $    ;- min and max data value
          }
