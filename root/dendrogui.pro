@@ -17,12 +17,13 @@ pro dendrogui_event, event
      tag_names(event, /struct) ne 'SLICE3_EVENT'
 
   if resizeEvent then begin
+     pad = 4. 
      g = widget_info(state.toprow, /geom)
      widget_control, state.bottomrow, $
-                     scr_xsize = event.x, $
-                     scr_ysize = event.y - g.scr_ysize
+                     scr_xsize = event.x - pad, $
+                     scr_ysize = event.y - g.scr_ysize - pad
      widget_control, state.toprow, $
-                     scr_xsize = event.x
+                     scr_xsize = event.x - pad
      return
   endif
 
@@ -30,6 +31,12 @@ pro dendrogui_event, event
   doListen = menuEvent ? 0 : dendro_check_listen(event, state)
   keyboardEvent = ~menuEvent && (event.key ne 0 || event.ch ne 0)
   imEvent = tag_names(event, /struct) eq 'SLICE3_EVENT'
+
+  if keyboardEvent && $
+     event.release && $
+     event.ch ne 0 && $
+     (event.ch eq byte('3')) && state.is3D $
+  then dendro_iso, state
 
   ;- toggle leaf plotting with "L" key?
   if keyboardEvent && $
@@ -78,6 +85,15 @@ pro dendrogui_event, event
   widget_control, event.top, set_uvalue = state
 end
 
+pro dendro_iso, state
+  ;- draw the 1st mask
+  mask = ((*state.mask) and 1) ne 0
+  if max(mask) eq 0 then return
+  isosurface, mask, 1, v, c
+  save, v, c, file='iso.sav'
+  obj = obj_new('idlgrpolygon', v, poly = c)
+  xobjview, obj
+end
 
 function dendro_check_listen, event, state
   if event.LEFT_CLICK || event.RIGHT_CLICK then begin
@@ -225,6 +241,8 @@ pro dendrogui, ptr
   ;- make a cube
   cube = fltarr(max((*ptr).x)+1, max((*ptr).y)+1, max((*ptr).v)+1)
   cube[(*ptr).x, (*ptr).y, (*ptr).v] = (*ptr).t
+  nd = size(cube, /n_dim) & sz = size(cube)
+  is3D = nd eq 3 && sz[3] gt 1
   nanswap, cube, 0
   cubeptr = ptr_new(cube)
 
@@ -268,6 +286,7 @@ pro dendrogui, ptr
   state = {$
           ptr:ptr, $               ;-dendrogram pointer
           mask:mask, $             ;-pointer to masked cube
+          is3D:is3D, $             ;-data 3D?
           
           tlb:tlb, $               ;-top level base holding dendro plot
           toprow:toprow, $         ;-base widget id holding the menubar
