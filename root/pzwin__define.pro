@@ -281,11 +281,24 @@ function pzwin::init, model, parent, standalone = standalone, $
 
   ;- set up widgets
   if keyword_set(standalone) then begin 
-     base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize')
+     base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col)
   endif else begin
-     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize')
+     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', /col)
   endelse
 
+  ;-3 rows of bases
+  base1 = widget_base(base,/row, xpad = 0, ypad = 0)
+  base2 = widget_base(base,/row, xpad = 0, ypad = 0)
+  base3 = widget_base(base,/row, xpad = 0, ypad = 0)
+
+  ;- menu bar
+  file = widget_button(base1, value='File')
+  ;-button bar
+  move = widget_button(base2, value='move.bmp', /bitmap)
+  resize = widget_button(base2, value='resize.bmp', /bitmap)
+  rot = widget_button(base2, value='rot.bmp', /bitmap)
+
+  ;-draw window
   ratio = 1. * wid[1] / wid[0]
   if ratio gt 1 then begin
      xsize = 500
@@ -298,7 +311,7 @@ function pzwin::init, model, parent, standalone = standalone, $
      xsize = 500 & ysize = 500
   endif
   
-  draw = widget_draw(base, xsize = xsize, ysize = ysize, graphics_level = 2, $
+  draw = widget_draw(base3, xsize = xsize, ysize = ysize, graphics_level = 2, $
                      /button_events, /wheel_events, /motion_events, $
                      keyboard_events = keyword_set(keyboard_events) ? 2 : 0)
   self.model = model
