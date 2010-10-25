@@ -120,15 +120,13 @@ function slice3::event, event, draw_event = draw_event
         g = widget_info(self.base, /geometry)
         g2 = widget_info(self.draw_base, /geometry)
         ratio = 1. * g2.scr_xsize / g2.scr_ysize
-
+        
         x1 = g.scr_xsize & y1 = x1 /ratio
         y2 = g.scr_ysize & x2 = y2 * ratio
         if y1 le g.scr_ysize then begin
-           widget_control, self.draw_base, scr_xsize = x1, $
-                           scr_ysize = y1
+           self.win->resize, x1, y1
         endif else begin
-           widget_control, self.draw_base, scr_xsize = x2, $
-                           scr_ysize = y2
+           self.win->resize, x2, y2
         endelse
         self.win->request_redraw
      end  
