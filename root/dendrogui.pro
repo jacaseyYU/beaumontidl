@@ -17,13 +17,16 @@ pro dendrogui_event, event
      tag_names(event, /struct) ne 'SLICE3_EVENT'
 
   if resizeEvent then begin
-     pad = 4. 
+     widget_control, state.tlb, update = 0
+     print, 'resize event'
+     pad = 20. 
      g = widget_info(state.toprow, /geom)
-     widget_control, state.bottomrow, $
-                     scr_xsize = event.x - pad, $
-                     scr_ysize = event.y - g.scr_ysize - pad
      widget_control, state.toprow, $
                      scr_xsize = event.x - pad
+     
+     state.draw->resize, event.x - pad, event.y - g.ysize - pad
+     widget_control, state.tlb, update = 1
+     print, 'done'
      return
   endif
 
@@ -91,8 +94,16 @@ pro dendro_iso, state
   if max(mask) eq 0 then return
   isosurface, mask, 1, v, c
   save, v, c, file='iso.sav'
+  help, v
   obj = obj_new('idlgrpolygon', v, poly = c)
-  xobjview, obj
+  help, v
+  light = obj_new('idlgrlight', type = 0, intensity = 0.5)
+  model = obj_new('idlgrmodel')
+  model->add, obj
+  model->add, light
+  win = obj_new('pzwin', model, /rot, /standalone, $
+                xra = minmax(v[0,*]), $
+                yra = minmax(v[1,*]))
 end
 
 function dendro_check_listen, event, state
@@ -260,10 +271,10 @@ pro dendrogui, ptr
   toprow = widget_base(tlb, /row)
   menu = cw_pdmenu(toprow, desc)
   label = widget_label(toprow, value='              ')
-  bottomrow=widget_base(tlb)
+  ;bottomrow=widget_base(tlb, /column, frame = 3)
   xra = minmax((*ptr).xlocation) + range((*ptr).xlocation)*[-.05,.05]
   yra = minmax((*ptr).height) + range((*ptr).height)*[-.05,.05]
-  draw = obj_new('pzwin', model, bottomrow, $
+  draw = obj_new('pzwin', model, tlb, $
                  xrange = xra, $
                  yrange = yra, $
                  /keyboard)
@@ -290,7 +301,6 @@ pro dendrogui, ptr
           
           tlb:tlb, $               ;-top level base holding dendro plot
           toprow:toprow, $         ;-base widget id holding the menubar
-          bottomrow:bottomrow, $   ;-base widget id holding the dendro plot
 
           draw:draw, $             ;-pzwin for dendrogram plot
           dendro:dendro, $         ;-main dendrogram plot object

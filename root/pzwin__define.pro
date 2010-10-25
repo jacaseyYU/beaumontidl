@@ -22,12 +22,9 @@
 ;  If pzwin runs as a standalone application, the gui is immediately
 ;  created and run in a new window.
 ;
-;  If pzwin is to be embedded in another GUI, it should be placed into
-;  its own widget_base, with nothing else inside. Failing to do so
-;  leads to improper resizing.
-;
-;  A pzwin display will automatically resize itself to the size of the
-;  widget base it is embedded into.
+;  The pzwin object is resizeable, but does not automatically size
+;  itself. Use the resize method to set the approximate total size of
+;  the pzwin (plot + buttons).
 ;
 ;  When running pzwin, left click-dragging drags the graphic. Mouse
 ;  scrolling zooms in our out. Right-click dragging adjusts the
@@ -55,6 +52,8 @@
 ;
 ; MODIFICATION HISTORY:
 ;  September 2010: Written by Chris Beaumont
+;  October 2010: Added rotation functionality for 3d models. Change
+;  how resize events work. cnb.
 ;-
 
 ;-----------------
@@ -98,64 +97,125 @@ function pzwin::event, event
      return, 1
   endif
 
-  widget_control, self.draw, get_value = win
-  result = -1
-
-  ;- resize draw window
-  g = widget_info(self.parent, /geom)
-  if g.scr_xsize ne self.base_sz[0] || $
-     g.scr_ysize ne self.base_sz[1] then begin
-     self->resize, g.scr_xsize, g.scr_ysize
-     self.redraw = 1
+  ;- in standalone mode, handle resize events
+  if tag_names(event, /struct) eq 'WIDGET_BASE' then begin
+     self->resize, event.x, event.y
+     return, 1
   endif
 
-  outside = event.x lt 0 || event.y lt 0 || $
-            event.x ge g.scr_xsize || $
-            event.y ge g.scr_ysize
-  
-  junk = win->pickdata(self.view, self.model, [event.x, event.y], $
-                       xyz)
-  
-  case event.type of
-     0: begin                   ;- button press
-        if event.press eq 1 then self.l_drag = 1
-        if event.press eq 4 then self.r_drag = 1
-        self.anchor = xyz[0:1]
-     end
-     1: begin
-        self.l_drag = 0B          ;- button release
-        self.r_drag = 0B
-     end
-     2: begin                   ;- mouse motion
-        if ~self.l_drag && ~self.r_drag then break
-        if outside then break
-        if (self.modifiers ne 0) && $
-           (event.modifiers and self.modifiers) eq 0 then break
+  widget_control, self.draw, get_value = win
+  widget_control, event.id, get_uvalue = uval
 
-        self.redraw = 1
-        delta = xyz[0:1] - self.anchor
-        ;- left mouse dragging pans
-        if self.l_drag then begin
-           self.view_cen = self.view_cen - delta
-           self->update_viewplane
-        ;- right mouse drag stretches an image
-        endif else if self.r_drag && self.isImage then begin
-           g = widget_info(self.draw, /geom)
-           bias = 0 > (1. * event.x / g.scr_xsize) < 1
-           contrast = 0 > (1. * event.y / g.scr_ysize) < 1
-           self.image->set_stretch, bias = bias, contrast = contrast
-        endif
+  case uval of
+     'FILE': begin
+        print, 'doing nothing'
+        return, 1
      end
-     5: ;-keyboard release
-     6: ;-keyboard release
-     7: begin                   ;- wheel motion
-        self.redraw = 1
-        zoomIn = event.clicks gt 0
-        self->zoom, zoomIn, event.x, event.y, xyz
+     'ROTATE': begin
+        self.doRotate = 1
+        self.doTranslate = 0
+        self.doRescale = 0
+        widget_control, self.translateButton, set_value = self.bmp_translate_deselect
+        widget_control, self.rotateButton, set_value = self.bmp_rotate_select
+        widget_control, self.resizeButton, set_value = self.bmp_resize_deselect
+        return, 1
+     end
+     'TRANSLATE':begin
+        self.doRotate = 0
+        self.doTranslate = 1
+        self.doRescale = 0
+        widget_control, self.translateButton, set_value = self.bmp_translate_select
+        widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
+        widget_control, self.resizeButton, set_value = self.bmp_resize_deselect
+        return, 1
+     end
+     'RESIZE':begin
+        self.doRotate = 0
+        self.doTranslate = 0
+        self.doRescale = 1
+        widget_control, self.translateButton, set_value = self.bmp_translate_deselect
+        widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
+        widget_control, self.resizeButton, set_value = self.bmp_resize_select
+        return, 1
+     end
+     'DRAW': begin
+        ;- calculate some helper info
+        result = -1
+        g = widget_info(self.base, /geom)
+        outside = event.x lt 0 || event.y lt 0 || $
+                  event.x ge g.scr_xsize || $
+                  event.y ge g.scr_ysize
+        junk = win->pickdata(self.view, self.model, [event.x, event.y], $
+                             xyz)
+        haveTransform = self.trackball->update(event, transform=qmat)
+
+        case event.type of
+           0: begin             ;- button press
+              if event.press eq 1 then self.l_drag = 1
+              if event.press eq 4 then self.r_drag = 1
+              if self.l_drag && self.doRotate then self->toggleWireframe
+              self.anchor = [event.x, event.y]
+           end
+           1: begin
+              if self.l_drag && self.doRotate then self->toggleWireframe
+              self.l_drag = 0B  ;- button release
+              self.r_drag = 0B
+              if self.updatePolys then self->updatePolys
+           end
+           2: begin             ;- mouse motion
+              if ~self.l_drag && ~self.r_drag then break
+              if outside then break
+              if (self.modifiers ne 0) && $
+                 (event.modifiers and self.modifiers) eq 0 then break
+            
+              self.redraw = 1
+
+              ;-rotating, translate, or rescale?
+              if self.doRotate then begin
+                 if haveTransform ne 0 then begin
+                    self.model->getProperty, transform=t
+                    self.model->setProperty, transform=t#qmat
+                    self.updatePolys = 1
+                 endif
+              endif else if self.doTranslate then begin
+                 delta = [event.x, event.y] - self.anchor
+                 g1 = widget_info(self.draw, /geom)
+                 delta = delta / [g1.xsize, g1.ysize] * self.view_wid
+
+                 ;- left mouse dragging pans
+                 if self.l_drag then begin
+                    self.view_cen = self.view_cen - delta
+                    self.anchor = [event.x, event.y]
+                    self->update_viewplane
+                 endif
+              endif else if self.doreScale then begin
+                 delta = xyz[0:1] - self.anchor
+                 
+                 print, 'Rescaling Not yet implemented'
+              endif
+
+              ;- right mouse drag stretches an image
+              if self.r_drag && self.isImage then begin
+                 g = widget_info(self.draw, /geom)
+                 bias = 0 > (1. * event.x / g.scr_xsize) < 1
+                 contrast = 0 > (1. * event.y / g.scr_ysize) < 1
+                 self.image->set_stretch, bias = bias, contrast = contrast
+              endif
+           end
+           5:                   ;-keyboard release
+           6:                   ;-keyboard release
+           7: begin             ;- wheel motion
+              self.redraw = 1
+              zoomIn = event.clicks gt 0
+              self->zoom, zoomIn, event.x, event.y, xyz
+           end
+           else:
+        endcase                 ;- end of draw events
      end
      else:
-  endcase
-
+  endcase                       ;- end of event identification
+  
+  ;-pass information up the hierarchy
   result = {pzwin_event, ID: event.handler, TOP: event.top, HANDLER:0L, $
             x:xyz[0], y:xyz[1], $
             LEFT_CLICK: event.type eq 0 && event.press eq 1, $
@@ -179,18 +239,72 @@ pro pzwin::clear_event_filter
   self.modifiers=0
 end
 
-pro pzwin::resize, xsz, ysz
-  widget_control, self.draw, draw_xsize = xsz, draw_ysize = ysz
-  self.base_sz = [xsz, ysz]
+function pzwin::getPolygonObjects, count
+  objs = self.model->get(/all, count = ct)
+  i = 0
+  while i lt n_elements(objs) do begin
+     if obj_isa(objs[i], 'IDLGRPOLYGON') then $
+        result = append(result, objs[i])
+     if obj_isa(objs[i], 'IDLGRMODEL') then begin
+        new = objs[i]->get(/all, count = ct)
+        if ct ne 0 then objs = [objs, new]
+     endif
+     i++
+  endwhile
+  count = n_elements(result)
+  if count gt 0 then return, result else return, -1
 end
 
+pro pzwin::toggleWireframe
+  return
+  polys = self->getPolygonObjects(ct)
+  for i = 0, ct - 1, 1 do begin
+     polys[i]->getProperty, style = s
+     polys[i]->setProperty, style = (s eq 2) ? 1 : 2
+  endfor
+end
+
+pro pzwin::updatePolys
+  print, 'updating polygons'
+  polys = self->getPolygonObjects(ct)
+  self.model->getProperty, transform = t
+  for i = 0, ct - 1, 1 do begin
+     polys[i]->getProperty, poly = p, data = d
+     pnew = orderpolys(d, p, t)
+     polys[i]->setProperty, poly = pnew
+  endfor
+  self.redraw=1
+end
+
+;- resizes widgets, when tlb is resized to xsz, ysz
+pro pzwin::resize, xsz, ysz
+  widget_control, self.base, update = 0
+  g1 = widget_info(self.menubase, /geom)
+  g2 = widget_info(self.buttonbase, /geom)
+  pad = 3.
+  widget_control, self.menubase, xsize = xsz - pad
+  widget_control, self.buttonbase, xsize = xsz - pad
+  widget_control, self.draw, xsize = xsz - pad, ysize = ysz - g1.ysize - g2.ysize - 5 * pad
+  g = widget_info(self.base, /geom)
+  self.base_sz = [g.scr_xsize, g.scr_ysize]
+
+  widget_control, self.base, update = 1
+  self->new_trackball
+  self.redraw = 1
+end
+
+pro pzwin::new_trackball
+  obj_destroy, self.trackball
+  g = widget_info(self.drawbase, /geom)
+  self.trackball = obj_new('trackball', [g.xsize/2, g.ysize/2], (g.xsize < g.ysize) /2)
+end
 
 pro pzwin::redraw
   compile_opt idl2
   t = systime(/seconds)
   max_rate = 20.
   ;- continue the draw loop
-  widget_control, self.draw, timer=.02
+  widget_control, self.draw, timer=.05
 
   ;- avoid unnecessary redraws
   if ~self.redraw || 1. / (t - self.last_render) gt max_rate then return
@@ -201,7 +315,6 @@ pro pzwin::redraw
   self.redraw = 0
   return
 end
-
 
 pro pzwin::zoom, zoomIn, x, y, xyz
   widget_control, self.draw, get_value = win
@@ -259,6 +372,7 @@ end
 
 pro pzwin::cleanup
   obj_destroy, self.view
+  obj_destroy, self.trackball
 end
 
 function pzwin::get_widget_id
@@ -266,37 +380,65 @@ function pzwin::get_widget_id
 end
 
 function pzwin::init, model, parent, standalone = standalone, $
-                      xrange = xrange, yrange = yrange, image = image, $
+                      xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
                       keyboard_events = keyboard_events, $
+                      rotate = rotate, $
                       _extra = extra
   
   ;- set up view
   rect = [-1., -1, 2, 2]
   if keyword_set(xrange) then rect[[0,2]] = [xrange[0], xrange[1]-xrange[0]]
   if keyword_set(yrange) then rect[[1,3]] = [yrange[0], yrange[1]-yrange[0]]
+  if ~keyword_set(zrange) then zrange=[-5,5]
+  zrange = [max(zrange, min=lo), lo]
   cen = [ (rect[0] + rect[2])/2., (rect[1] + rect[3])/2.]
   wid = [ rect[2] - rect[0], rect[3] - rect[1] ]
   view = obj_new('idlgrview', viewplane_rect=rect)
   view->add, model
-
+;  model->getProperty, zrange = zra
+  view->setProperty, zclip = zrange
   ;- set up widgets
   if keyword_set(standalone) then begin 
-     base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col)
+     base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3, $
+                        /tlb_size_events)
   endif else begin
-     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', /col)
+     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3)
   endelse
+  ;- a dummy base to hold the uvalue
+  dummy = widget_base(base)
 
   ;-3 rows of bases
   base1 = widget_base(base,/row, xpad = 0, ypad = 0)
-  base2 = widget_base(base,/row, xpad = 0, ypad = 0)
-  base3 = widget_base(base,/row, xpad = 0, ypad = 0)
+  base2 = widget_base(base,/row, xpad = 0, ypad = 0, frame = 3)
+  base3 = widget_base(base, xpad = 0, ypad = 0, frame = 3)
 
   ;- menu bar
-  file = widget_button(base1, value='File')
+;  file = widget_button(base2, value='File', uvalue='FILE')
+
   ;-button bar
-  move = widget_button(base2, value='move.bmp', /bitmap)
-  resize = widget_button(base2, value='resize.bmp', /bitmap)
-  rot = widget_button(base2, value='rot.bmp', /bitmap)
+  move_im = read_image('~/pro/move.bmp')
+  move_im = transpose(congrid(move_im, 3, 20, 20), [1,2,0])
+  select = move_im & select[*,*,0] = 255B
+  self.bmp_translate_select = select
+  self.bmp_translate_deselect = move_im
+  move = widget_button(base2, value=select, uvalue='TRANSLATE', accelerator='Ctrl+t')
+  self.translateButton = move
+
+  resize_im = read_image('~/pro/resize.bmp')
+  resize_im = transpose(congrid(resize_im, 3,20,20),[1,2,0])
+  select = resize_im & select[*,*,0] = 255B
+  self.bmp_resize_select = select
+  self.bmp_resize_deselect = resize_im
+  resize = widget_button(base2, value=resize_im, uvalue='RESIZE')
+  self.resizeButton = resize
+
+  rot_im = read_image('~/pro/rot.bmp')
+  rot_im = transpose(congrid(rot_im, 3, 20, 20), [1,2,0])
+  select = rot_im & select[*,*,0] = 255B
+  self.bmp_rotate_select = select
+  self.bmp_rotate_deselect = rot_im
+  rot = widget_button(base2, value=rot_im, uvalue='ROTATE', sensitive=keyword_set(rotate), accelerator='Ctrl+r')
+  self.rotateButton = rot
 
   ;-draw window
   ratio = 1. * wid[1] / wid[0]
@@ -313,17 +455,25 @@ function pzwin::init, model, parent, standalone = standalone, $
   
   draw = widget_draw(base3, xsize = xsize, ysize = ysize, graphics_level = 2, $
                      /button_events, /wheel_events, /motion_events, $
-                     keyboard_events = keyword_set(keyboard_events) ? 2 : 0)
+                     keyboard_events = keyword_set(keyboard_events) ? 2 : 0, $
+                     uvalue = 'DRAW')
+
+  self.trackball = obj_new('Trackball', [xsize/2, ysize/2.], (xsize < ysize)/2.)
+  self.doTranslate = 1B
   self.model = model
   self.view = view
   self.draw = draw
   self.base = base
+  self.menubase = base1
+  self.buttonbase = base2
+  self.drawbase = base3
   self.parent = keyword_set(standalone) ? base : parent
   self.view_cen = cen
   self.view_wid = wid
   self.last_render=0.
   self.standalone = keyword_set(standalone)
   self.isImage = keyword_set(image)
+  self.is3D = keyword_set(rotate)
   self.redraw = 1
   if self.isImage then self.image = image
 
@@ -342,21 +492,46 @@ end
 pro pzwin__define
 
   data = {pzwin, $
-          model:obj_new(''), $  ;- Model object. Provided on input
-          view:obj_new(''), $   ;- view object. Created during init
-          draw:0L, $            ;- draw widget id. value -> draw object
-          base:0L, $            ;- root of the pzwin widget hierarchy
+
+          ;-objects
+          model:obj_new(), $     ;- Model object. Provided on input
+          view:obj_new(), $      ;- view object. Created during init
+          trackball:obj_new(),$  ;- trackball to handle translation/rotation
+          image:obj_new(), $     ;- the CNBgrImage object, if isImage is true
+          
+          ;-widgets
           parent:0L, $          ;- widget into which pzwin is embedded (or base)
+          base:0L, $            ;- root of the pzwin widget hierarchy
+          menubase:0L, $        ;- widget base for menubar
+          buttonbase:0L, $      ;- widget base for buttons
+          drawbase:0L, $        ;- widget base for draw
+          translateButton:0L, $
+          rotateButton:0L, $
+          resizeButton:0L, $
+          draw:0L, $            ;- draw widget id. value -> draw object
+
+          ;- button bitmaps
+          bmp_translate_deselect:bytarr(20,20,3), $
+          bmp_translate_select:bytarr(20,20,3), $
+          bmp_rotate_deselect:bytarr(20,20,3), $
+          bmp_rotate_select:bytarr(20,20,3), $
+          bmp_resize_deselect:bytarr(20,20,3), $
+          bmp_resize_select:bytarr(20,20,3), $
+  
           base_sz:[0., 0.], $   ;- size of base widget
           view_cen:[0.,0.], $   ;- center of viewport, in data coords
           view_wid:[0.,0.], $   ;- width of viewport, in data coords
+          doRotate:0B, $        ;- mouse motion rotates?
+          doTranslate:0B, $     ;- mouse motion translates?
+          doRescale:0B, $       ;- mouse motion rescales?
           l_drag:0B, $          ;- left dragging?
           r_drag:0B, $          ;- right dragging
           anchor:[0., 0.], $    ;- cursor pos at start of drag
           last_render:0D, $     ;- time of last render
           standalone:0B, $      ;- widget a standalone object?
           isImage:0B, $         ;- does the model object hold a CNBgrImage object?
-          image:obj_new(), $    ;- the CNBgrImage object, if isImage is true
+          is3D:0B, $            ;- is the graphic a rotateable, 3D model?
+          updatePolys:0B, $     ;- request to re-order polygons for 3d polygons
           debug: 0B, $
           redraw:0B, $           ;- request for redraw command
           modifiers:0B $         ;- a keyboard modifier filter used to ignore events
@@ -379,11 +554,16 @@ pro test
 end
 
 pro test_embed_event, ev
-  help, ev, /struct
+  widget_control, ev.top, get_uvalue = state
+  if tag_names(ev, /struct) eq 'WIDGET_BASE' then begin
+     pad = 3
+     g = widget_info(state.button, /geom)
+     state.pzwin->resize, ev.x - pad, ev.y - g.ysize - pad
+  endif
 end
 
 pro test_embed
-  tlb = widget_base(/column)
+  tlb = widget_base(/column, /tlb_size_event)
   pz_base = widget_base(tlb)
 
   x = arrgen(1., 10., .1)
@@ -400,7 +580,44 @@ pro test_embed
 
 
   widget_control, tlb, /realize
+  state={plot:plot, model:model, button:button, tlb:tlb, pzwin:obj, pz_base:pz_base}
+  widget_control, tlb, set_uvalue = state
 
   xmanager, 'test_embed', tlb
-  help, /heap
+end
+
+pro test3d
+
+  oTop = OBJ_NEW('IDLgrModel')
+  oGroup = OBJ_NEW('IDLgrModel')
+  oTop->Add, oGroup
+
+  zData = BESELJ(SHIFT(DIST(40),20,20)/2,0)
+  
+  sz = SIZE(zData)
+  zMax = MAX(zData, MIN=zMin)
+
+  xMax = sz[1] - 1
+  yMax = sz[2] - 1
+  zMin2 = zMin - 1
+  zMax2 = zMax + 1 
+
+  ; Compute coordinate conversion to normalize.
+  xs = [-0.5,1.0/xMax]
+  ys = [-0.5,1.0/yMax]
+  zs = [(-zMin2/(zMax2-zMin2))-0.5, 1.0/(zMax2-zMin2)]
+  
+  oSurface = OBJ_NEW('IDLgrSurface', zData, STYLE=2, SHADING=0, $
+                     COLOR=[60,60,255], BOTTOM=[64,192,128], $
+                     XCOORD_CONV=xs, YCOORD_CONV=ys, ZCOORD_CONV=zs)
+  oGroup->Add, oSurface
+  
+  ; Create some lights.
+  oLight = OBJ_NEW('IDLgrLight', LOCATION=[2,2,2], TYPE=1)
+  oTop->Add, oLight
+  oLight = OBJ_NEW('IDLgrLight', TYPE=0, INTENSITY=0.5)
+  oTop->Add, oLight
+  
+  ; Place the model in the view.  
+  x = obj_new('pzwin', oTop, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard, /rotate  )
 end
