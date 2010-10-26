@@ -425,7 +425,9 @@ function pzwin::init, model, parent, standalone = standalone, $
 ;  file = widget_button(base2, value='File', uvalue='FILE')
 
   ;-button bar
-  move_im = read_image('~/pro/move.bmp')
+  file = file_which('move.bmp')
+  if ~file_test(file) then message, 'cannot find move.bmp'
+  move_im = read_image(file)
   move_im = transpose(congrid(move_im, 3, 20, 20), [1,2,0])
   select = move_im & select[*,*,0] = 255B
   self.bmp_translate_select = select
@@ -433,7 +435,9 @@ function pzwin::init, model, parent, standalone = standalone, $
   move = widget_button(base2, value=select, uvalue='TRANSLATE', accelerator='Ctrl+t')
   self.translateButton = move
 
-  resize_im = read_image('~/pro/resize.bmp')
+  file = file_which('resize.bmp')
+  if ~file_test(file) then message, 'cannot find resize.bmp'
+  resize_im = read_image(file)
   resize_im = transpose(congrid(resize_im, 3,20,20),[1,2,0])
   select = resize_im & select[*,*,0] = 255B
   self.bmp_resize_select = select
@@ -441,7 +445,9 @@ function pzwin::init, model, parent, standalone = standalone, $
   resize = widget_button(base2, value=resize_im, uvalue='RESIZE')
   self.resizeButton = resize
 
-  rot_im = read_image('~/pro/rot.bmp')
+  file = file_which('rot.bmp')
+  if ~file_test(file) then message, 'cannot find rot.bmp'
+  rot_im = read_image(file)
   rot_im = transpose(congrid(rot_im, 3, 20, 20), [1,2,0])
   select = rot_im & select[*,*,0] = 255B
   self.bmp_rotate_select = select
