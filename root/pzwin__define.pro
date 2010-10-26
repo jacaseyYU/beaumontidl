@@ -318,8 +318,9 @@ end
 
 pro pzwin::zoom, zoomIn, x, y, xyz
   widget_control, self.draw, get_value = win
-
+  print, 'odl wid', self.view_wid
   self.view_wid = self.view_wid * (zoomIn ? .98 : 1.02)
+  print, 'new wid', self.view_wid
   self->update_viewplane
   junk = win->pickdata(self.view, self.model, [x, y], $
                             xyz2)
@@ -382,26 +383,33 @@ end
 function pzwin::init, model, parent, standalone = standalone, $
                       xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
                       keyboard_events = keyboard_events, $ 
-                      projection = projection, $
                       rotate = rotate, $
+                      group_leader = group_leader, $
                       _extra = extra
   
   ;- set up view
-  rect = [-1., -1, 2, 2]
+  object_bounds, model, xra, yra, zra
+  rect = [xra[0], yra[0], range(xra), range(yra)]
+  print, 'bounds', xra, yra, zra
+  print, 'rect: ', rect
   if keyword_set(xrange) then rect[[0,2]] = [xrange[0], xrange[1]-xrange[0]]
   if keyword_set(yrange) then rect[[1,3]] = [yrange[0], yrange[1]-yrange[0]]
-  if ~keyword_set(zrange) then zrange=[-5,5]
+  if ~keyword_set(zrange) then zrange= [max([xra, yra, zra], min=lo), lo]
   zrange = [max(zrange, min=lo), lo]
-  cen = [ (rect[0] + rect[2])/2., (rect[1] + rect[3])/2.]
-  wid = [ rect[2] - rect[0], rect[3] - rect[1] ]
-  view = obj_new('idlgrview', viewplane_rect=rect, projection = projection)
+  zrange += .3 * range(zrange) * [1,-1]
+
+  cen = [rect[0] + rect[2]/2., rect[1] + rect[3]/2.]
+  wid = [rect[2], rect[3]]
+  print, 'cen', cen
+  print, 'wid', wid
+  view = obj_new('idlgrview', viewplane_rect=rect, _extra = extra)
   view->add, model
-;  model->getProperty, zrange = zra
-  view->setProperty, zclip = zrange
+  if keyword_set(rotate) then $
+     view->setProperty, zclip = zrange
   ;- set up widgets
   if keyword_set(standalone) then begin 
      base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3, $
-                        /tlb_size_events)
+                        /tlb_size_events, group_leader = group_leader)
   endif else begin
      base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3)
   endelse
@@ -539,7 +547,7 @@ pro pzwin__define
          }
 end
           
-pro test
+pro test_im
 
   x = arrgen(1., 10., .1)
   y = sin(x)

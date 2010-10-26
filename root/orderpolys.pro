@@ -68,7 +68,7 @@ function orderpolys, v, c, t
      message, 'connectivity vector c must consist of triangular faces only'
   n /= 4
 
-  ind = lindgen(n) * 4
+  ind = ulindgen(n) * 4
 
   if range(c[ind]) ne 0 || c[ind[0]] ne 3 then $
      message, 'connectivity vector c must consist of triangular faces only'
@@ -82,7 +82,7 @@ function orderpolys, v, c, t
   result = reform(result, n * 4, /over)
   
   ;- final sanity check
-  ;assert, range(result[ind]) eq 0 and result[ind[0]] eq 3
+  assert, range(result[ind]) eq 0 and result[ind[0]] eq 3
 
   return, result
 end

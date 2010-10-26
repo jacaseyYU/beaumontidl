@@ -39,7 +39,7 @@ pro dendrogui_event, event
      event.release && $
      event.ch ne 0 && $
      (event.ch eq byte('3')) && state.is3D $
-  then dendro_iso, state
+  then dendrogui_3dmodel, state
 
   ;- toggle leaf plotting with "L" key?
   if keyboardEvent && $
@@ -237,7 +237,7 @@ pro dendrogui_cleanup, id
   widget_control, id, get_uvalue = info
   obj_destroy, [info.dendro, info.model, $
                info.draw, $
-               info.z, info.subplot]
+               info.z, info.subplot, info.isowin]
   ptr_free, info.mask
 end
 
@@ -303,6 +303,7 @@ pro dendrogui, ptr
           toprow:toprow, $         ;-base widget id holding the menubar
 
           draw:draw, $             ;-pzwin for dendrogram plot
+          isowin:obj_new(), $      ;-pzwin for isosurface plot
           dendro:dendro, $         ;-main dendrogram plot object
           subplot:objarr(8), $     ;-dendrogram substructure plot objects 
           model:model, $           ;-idlgrmodel holding dendrogram plots
@@ -321,7 +322,7 @@ pro dendrogui, ptr
   
   z->run
   widget_control, tlb, /realize, set_uvalue = state
-
+  save, state, file='dendrogui.sav'
   xmanager, 'dendrogui', cleanup='dendrogui_cleanup', tlb, /no_block
 end
   
