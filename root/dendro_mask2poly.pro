@@ -43,9 +43,10 @@ function dendro_mask2poly, mask, colors = incolors, _extra = extra
   endfor
 
   ;- make the idlgrpolygon object
-  result = obj_new('idlgrpolygon', vert, poly = conn, $
+  newv = mesh_smooth(vert, conn, lambda = .1)
+  result = mesh_decimate(newv, conn, newc)
+  result = obj_new('idlgrpolygon', newv, poly = newc, $
                    vert_colors = col, _extra = extra)
-
   return, result
 end
 
