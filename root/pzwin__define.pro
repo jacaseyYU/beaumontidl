@@ -381,7 +381,8 @@ end
 
 function pzwin::init, model, parent, standalone = standalone, $
                       xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
-                      keyboard_events = keyboard_events, $
+                      keyboard_events = keyboard_events, $ 
+                      projection = projection, $
                       rotate = rotate, $
                       _extra = extra
   
@@ -393,7 +394,7 @@ function pzwin::init, model, parent, standalone = standalone, $
   zrange = [max(zrange, min=lo), lo]
   cen = [ (rect[0] + rect[2])/2., (rect[1] + rect[3])/2.]
   wid = [ rect[2] - rect[0], rect[3] - rect[1] ]
-  view = obj_new('idlgrview', viewplane_rect=rect)
+  view = obj_new('idlgrview', viewplane_rect=rect, projection = projection)
   view->add, model
 ;  model->getProperty, zrange = zra
   view->setProperty, zclip = zrange
