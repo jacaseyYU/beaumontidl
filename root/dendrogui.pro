@@ -124,22 +124,22 @@ function dendro_check_listen, event, state
 end
 
 pro toggle_leafplot, state
+  print, 'toggling'
+
   ;- clear out current mask
   *state.mask and= not ishft(1, state.mask_id)
 
   ;- are we already showing leaves?
-  if state.leaf_id ne -1 then begin
-     *state.mask and= (not ishft(1, state.leaf_id))
-     state.model->remove, state.subplot[state.leaf_id]
-     obj_destroy, state.subplot[state.leaf_id]
-
-     state.leaf_id = -1
+  if state.id[state.mask_id] eq -2 then begin
+     state.model->remove, state.subplot[state.mask_id]
+     obj_destroy, state.subplot[state.mask_id]
+     state.id[state.mask_id] = -1
      subplot = obj_new()
   endif else begin
-     state.leaf_id = state.mask_id
+     state.id[state.mask_id] = -2
 
      ;- clear out current color
-     *state.mask and= not ishft(1, state.leaf_id)
+     *state.mask and= not ishft(1, state.mask_id)
 
      ;- create leaf mask
      ids = get_leaves((*state.ptr).clusters)
@@ -150,12 +150,13 @@ pro toggle_leafplot, state
         if (*ptr).cluster_label_h[ind] eq 0 then continue
         ind = (*ptr).cluster_label_ri[(*ptr).cluster_label_ri[ind] : $
                                       (*ptr).cluster_label_ri[ind+1]-1]
-        (*state.mask)[(*ptr).x[ind], (*ptr).y[ind], (*ptr).v[ind]] or= ishft(1, state.leaf_id)
+        (*state.mask)[(*ptr).x[ind], (*ptr).y[ind], (*ptr).v[ind]] or= ishft(1, state.mask_id)
      endfor
      subplot = leafplot_obj(state.ptr, color = state.subplot_colors[*, state.mask_id], thick=2)
   endelse
   
   ;-update plot
+  help, subplot
   dendro_update_plot, state, subplot
   
 end
@@ -316,7 +317,6 @@ pro dendrogui, ptr
           listen:1B, $             ;-updating masks?
           drag:0B, $               ;-mouse drags?
           old_listen:1B, $         ;-listen state before dragging
-          leaf_id: -1, $           ;-which mask traces leaves
           mask_id: 0, $            ;-currently-edited mask
           menu:menu}
   

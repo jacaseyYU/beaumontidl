@@ -318,9 +318,7 @@ end
 
 pro pzwin::zoom, zoomIn, x, y, xyz
   widget_control, self.draw, get_value = win
-  print, 'odl wid', self.view_wid
   self.view_wid = self.view_wid * (zoomIn ? .98 : 1.02)
-  print, 'new wid', self.view_wid
   self->update_viewplane
   junk = win->pickdata(self.view, self.model, [x, y], $
                             xyz2)

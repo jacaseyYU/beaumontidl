@@ -1,17 +1,23 @@
 pro dendrogui_3dmodel, state
 
-  poly = dendro_mask2poly(*state.mask, $
-                          colors = state.subplot_colors, $
-                          alpha = 0.5)
+  polys = dendrogui_polygons(state, alpha = .5, shading = 1)
+  if ~obj_valid(polys[0]) then return
+
+;  poly = dendro_mask2poly(*state.mask, $
+;                          colors = state.subplot_colors, $
+;                          alpha = 0.5)
 
   ;- shift polygon vertices so that the cube center is at origin
   sz = size(*state.mask)
-  
-  poly->getProperty, data = d
-  d[0,*] -= sz[1]/2.
-  d[1,*] -= sz[2]/2.
-  d[2,*] -= sz[3]/2.
-  poly->setProperty, data = d
+ 
+  for i = 0, n_elements(polys) - 1, 1 do begin
+     poly = polys[i]
+     poly->getProperty, data = d
+     d[0,*] -= sz[1]/2.
+     d[1,*] -= sz[2]/2.
+     d[2,*] -= sz[3]/2.
+     poly->setProperty, data = d
+  endfor
 
   ;- add some lights
   l1 = obj_new('idlgrlight', type = 2, loc = [sz[1], sz[2], 2*sz[3]], $
@@ -19,7 +25,7 @@ pro dendrogui_3dmodel, state
   l2 = obj_new('idlgrlight', type = 0, inten = 0.5, $
                color = [255,255,255])
   l3 = obj_new('idlgrlight', type = 2, loc = [-sz[1], -sz[2], -2*sz[3]], inten=.7)
-
+  
 
   ;- axes
   a1 = obj_new('idlgraxis', 0, range=[0,sz[1]]-sz[1]/2., title=obj_new('idlgrtext', 'X'))
@@ -29,7 +35,7 @@ pro dendrogui_3dmodel, state
   m->add, l1
   m->add, l2
   m->add, l3
-  m->add, poly
+  for i = 0, n_elements(polys) -1 do m->add, polys[i]
   m->add, a1
   m->add, a2
   m->add, a3
