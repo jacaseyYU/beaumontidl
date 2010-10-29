@@ -163,12 +163,12 @@ end
            
 
 pro test
-  data=replicate({x:0., y:0.,z:0.}, 50)
-  data.x = arrgen(-10, 10, nstep = 50)
+  data=replicate({x:0., y:0.,z:0.}, 5000)
+  data.x = arrgen(-10, 10, nstep = 5000)
   data.y = sin(data.x)/data.x
   data.z = cos(data.x)
   o = obj_new('interplot', data)
   o->run
-  o->set_subset_id, replicate(1, 25), indgen(25)
+  o->set_subset_id, replicate(1, 2500), indgen(2500)
 end
   
