@@ -232,6 +232,7 @@ function slice3::init, cube, slice = slice, group_leader = group_leader, $
      print, 'cube must be a 2D or 3D array'
      return, 0
   endif
+  if ~keyword_set(slice) then slice = 2
   if ndim eq 2 then self.is2D = 1
   if ndim eq 2 and slice ne 2 then $
      message, '2D images must set slice=2'

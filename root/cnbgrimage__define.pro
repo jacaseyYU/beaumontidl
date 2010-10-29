@@ -154,7 +154,7 @@ pro CNBgrImage::redraw
      subim = byte((subim + 1) * 127.5)
 
   endelse
-  sz = size(subim)
+  sz = size(reform(subim))
   
   ;- convert to 3 color
   result = bytarr(4, sz[1], sz[2])

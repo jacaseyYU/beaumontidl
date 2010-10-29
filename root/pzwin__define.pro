@@ -112,30 +112,15 @@ function pzwin::event, event
         return, 1
      end
      'ROTATE': begin
-        self.doRotate = 1
-        self.doTranslate = 0
-        self.doRescale = 0
-        widget_control, self.translateButton, set_value = self.bmp_translate_deselect
-        widget_control, self.rotateButton, set_value = self.bmp_rotate_select
-        widget_control, self.resizeButton, set_value = self.bmp_resize_deselect
+        self->setButton, /rotate
         return, 1
      end
      'TRANSLATE':begin
-        self.doRotate = 0
-        self.doTranslate = 1
-        self.doRescale = 0
-        widget_control, self.translateButton, set_value = self.bmp_translate_select
-        widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
-        widget_control, self.resizeButton, set_value = self.bmp_resize_deselect
+        self->setButton, /translate
         return, 1
      end
      'RESIZE':begin
-        self.doRotate = 0
-        self.doTranslate = 0
-        self.doRescale = 1
-        widget_control, self.translateButton, set_value = self.bmp_translate_deselect
-        widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
-        widget_control, self.resizeButton, set_value = self.bmp_resize_select
+        self->setButton, /resize
         return, 1
      end
      'DRAW': begin
@@ -151,20 +136,49 @@ function pzwin::event, event
 
         case event.type of
            0: begin             ;- button press
-              if event.press eq 1 then self.l_drag = 1
+              if event.press eq 1 then begin
+                 self.l_drag = 1
+                 if self.doRescale then begin
+                    self.rescale_plot = obj_new('idlgrplot', $
+                                                [event.x, event.x], $
+                                                [event.y, event.y], $
+                                                color=[255,0,0])
+                    self.rescale_model->add, self.rescale_plot
+                 endif
+              endif
               if event.press eq 4 then self.r_drag = 1
               if self.l_drag && self.doRotate then self->toggleWireframe
               self.anchor = [event.x, event.y]
            end
-           1: begin
+           1: begin ;- button release
               if self.l_drag && self.doRotate then self->toggleWireframe
-              self.l_drag = 0B  ;- button release
+              wasL = self.l_drag eq 1B
+              self.l_drag = 0B  
               self.r_drag = 0B
               if self.updatePolys then self->updatePolys
+              if self.doRescale && wasL then begin
+                 self.rescale_model->remove, self.rescale_plot
+                 self.redraw = 1
+                 obj_destroy, self.rescale_plot
+                 old = self.anchor
+                 new = [event.x, event.y]
+                 cen = (old + new) / 2
+                 wid = abs(old - new)
+                 if new[0] gt old[0] && min(wid) gt 10 then begin
+                    g1 = widget_info(self.draw, /geom)
+                    delta = cen - [g1.xsize/2, g1.ysize/2]
+                    delta = delta / [g1.xsize, g1.ysize] * self.view_wid
+                    magnify = wid / [g1.xsize, g1.ysize]
+                    if self.isImage then magnify[1] = magnify[0]
+                    self.view_cen += delta
+                    self.view_wid *= magnify
+                    self->update_viewplane
+                    
+                 endif
+              endif
            end
            2: begin             ;- mouse motion
               if ~self.l_drag && ~self.r_drag then break
-              if outside then break
               if (self.modifiers ne 0) && $
                  (event.modifiers and self.modifiers) eq 0 then break
             
@@ -188,21 +202,43 @@ function pzwin::event, event
                     self.anchor = [event.x, event.y]
                     self->update_viewplane
                  endif
-              endif else if self.doreScale then begin
-                 delta = xyz[0:1] - self.anchor
+              endif else if self.doreScale && self.l_drag then begin
+                 ;- update rescale box
+                 junk = win->pickdata(self.view, self.rescale_model, $
+                                           [event.x, event.y], xyz1)
+                 junk = win->pickdata(self.view, self.rescale_model, $
+                                    self.anchor, xyz2)
                  
-                 print, 'Rescaling Not yet implemented'
+                 ;- if this is an image, preserve the aspect ratio
+                 if self.isImage then xyz1[1] = xyz2[1] + (xyz1[0] - xyz2[0]) * $
+                                               self.view_wid[1]/self.view_wid[0] * $
+                                                sign(xyz1[1] - xyz2[1])
+                 
+                 x = [xyz1[0], xyz2[0], xyz2[0], xyz1[0], xyz1[0]]
+                 y = [xyz1[1], xyz1[1], xyz2[1], xyz2[1], xyz1[1]]
+                 if x[0] lt x[1] then x*=!values.f_nan
+
+                 self.rescale_plot->setProperty, $
+                    datax= x, datay = y
               endif
 
               ;- right mouse drag stretches an image
-              if self.r_drag && self.isImage then begin
+              if self.r_drag && self.isImage && ~outside then begin
                  g = widget_info(self.draw, /geom)
                  bias = 0 > (1. * event.x / g.scr_xsize) < 1
                  contrast = 0 > (1. * event.y / g.scr_ysize) < 1
                  self.image->set_stretch, bias = bias, contrast = contrast
               endif
            end
-           5:                   ;-keyboard release
+           5: begin             ;-keyboard release
+              if ~event.release then break
+              case strupcase(event.ch) of
+                 'R': if self.is3D then self->setButton, /rotate
+                 'T': self->setButton, /translate
+                 'Y': self->setButton, /resize
+                 else:
+              endcase
+           end
            6:                   ;-keyboard release
            7: begin             ;- wheel motion
               self.redraw = 1
@@ -228,6 +264,31 @@ function pzwin::event, event
             modifiers:event.modifiers, ch:event.ch, key:event.key}
 
   return, result
+end
+
+pro pzwin::setButton, translate = translate, rotate = rotate, resize = resize
+  if keyword_set(translate) then begin
+     self.doRotate = 0
+     self.doTranslate = 1
+     self.doRescale = 0
+     widget_control, self.translateButton, set_value = self.bmp_translate_select
+     widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
+     widget_control, self.resizeButton, set_value = self.bmp_resize_deselect
+  endif else if keyword_set(rotate) then begin
+     self.doRotate = 1
+     self.doTranslate = 0
+     self.doRescale = 0
+     widget_control, self.translateButton, set_value = self.bmp_translate_deselect
+     widget_control, self.rotateButton, set_value = self.bmp_rotate_select
+     widget_control, self.resizeButton, set_value = self.bmp_resize_deselect
+  endif else if keyword_set(resize) then begin
+     self.doRotate = 0
+     self.doTranslate = 0
+     self.doRescale = 1
+     widget_control, self.translateButton, set_value = self.bmp_translate_deselect
+     widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
+     widget_control, self.resizeButton, set_value = self.bmp_resize_select
+  endif else message, 'bug!'
 end
 
 pro pzwin::set_event_filter, control = control, shift = shift
@@ -401,7 +462,12 @@ function pzwin::init, model, parent, standalone = standalone, $
   print, 'cen', cen
   print, 'wid', wid
   view = obj_new('idlgrview', viewplane_rect=rect, _extra = extra)
+
+  self.rescale_model = obj_new('idlgrmodel')
+  self.rescale_plot = obj_new('idlgrplot')
   view->add, model
+  view->add, self.rescale_model
+  self.rescale_model->add, self.rescale_plot
   if keyword_set(rotate) then $
      view->setProperty, zclip = zrange
   ;- set up widgets
@@ -468,7 +534,7 @@ function pzwin::init, model, parent, standalone = standalone, $
   
   draw = widget_draw(base3, xsize = xsize, ysize = ysize, graphics_level = 2, $
                      /button_events, /wheel_events, /motion_events, $
-                     keyboard_events = keyword_set(keyboard_events) ? 2 : 0, $
+                     keyboard_events = 2, $
                      uvalue = 'DRAW')
 
   self.trackball = obj_new('Trackball', [xsize/2, ysize/2.], (xsize < ysize)/2.)
@@ -530,6 +596,10 @@ pro pzwin__define
           bmp_rotate_select:bytarr(20,20,3), $
           bmp_resize_deselect:bytarr(20,20,3), $
           bmp_resize_select:bytarr(20,20,3), $
+
+          ;- rescale objects
+          rescale_model:obj_new(), $
+          rescale_plot:obj_new(), $
   
           base_sz:[0., 0.], $   ;- size of base widget
           view_cen:[0.,0.], $   ;- center of viewport, in data coords
