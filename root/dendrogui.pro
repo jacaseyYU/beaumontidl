@@ -258,11 +258,6 @@ pro dendrogui, ptr
   nanswap, cube, 0
   cubeptr = ptr_new(cube)
 
-  ;- Dendrogram plot object of the entire hierarchy
-  dendro = dplot_obj(ptr, max((*ptr).clusters+1))
-  model = obj_new('IDLgrModel')
-  model->add, dendro
-
   ;- guis
   tlb = widget_base(/column, /tlb_size_events)
   desc = replicate({flags:0, name:''}, 9)
