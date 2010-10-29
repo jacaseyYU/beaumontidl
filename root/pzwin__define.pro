@@ -103,30 +103,29 @@ function pzwin::event, event
   if tag_names(event, /struct) eq 'WIDGET_BASE' then begin
      print, 'BASE EVENT!!!'
      self->resize, event.x, event.y
-     return, 1
+     return, 2
   endif
 
   ;- menu events
   if event.id eq self.mbar then begin
      print, 'menu'
-     return, 1
+     return, 3
   endif
 
   widget_control, self.draw, get_value = win
   widget_control, event.id, get_uvalue = uval
-  help, uval
   case uval of
      'ROTATE': begin
         self->setButton, /rotate
-        return, 1
+        return, 4
      end
      'TRANSLATE':begin
         self->setButton, /translate
-        return, 1
+        return, 5
      end
      'RESIZE':begin
         self->setButton, /resize
-        return, 1
+        return, 6
      end
      'DRAW': begin
         ;- calculate some helper info
@@ -169,7 +168,8 @@ function pzwin::event, event
             press:event.press, type:event.type, release:event.release, $
             modifiers:event.modifiers, ch:event.ch, key:event.key}
 
-  return, result
+  self->check_listen, result
+  return, self.listen ? result : 7
 end
 
 pro pzwin::button_press_event, event, info
@@ -356,7 +356,7 @@ pro pzwin::resize, xsz, ysz
   g1 = widget_info(self.mbar, /geom)
   g2 = widget_info(self.buttonbase, /geom)
   pad = 3.
-  widget_control, self.mbar, xsize = xsz - pad
+;  widget_control, self.mbar, xsize = xsz - pad
   widget_control, self.buttonbase, xsize = xsz - pad
   widget_control, self.draw, xsize = xsz - pad, ysize = ysz - g1.ysize - g2.ysize - 5 * pad
   g = widget_info(self.base, /geom)
@@ -434,7 +434,7 @@ pro pzwin::add_graphics_atom, atom, _extra = extra
   self.model->add, atom, _extra = extra
 end
 
-pro pzwin::remove_graphics_atom, atom
+pro pzwin::remove_graphlics_atom, atom
   self.model->remove, atom
 end
 
@@ -451,13 +451,36 @@ function pzwin::get_widget_id
   return, self.base
 end
 
-function pzwin::init, model, parent, standalone = standalone, $
+pro pzwin::check_listen, event
+   if event.LEFT_CLICK || event.RIGHT_CLICK then begin
+     self.old_listen = self.listen
+     self.listen = 0
+  endif
+  if event.LEFT_DRAG then self.drag = 1B
+  if event.LEFT_RELEASE then begin
+     if self.drag then self.listen = self.old_listen
+     if ~self.drag then self.listen = ~self.old_listen
+     self.drag = 0
+  endif
+  if event.RIGHT_RELEASE then begin
+     self.listen = self.old_listen
+  endif
+end
+
+function pzwin::init, model, $
                       xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
                       keyboard_events = keyboard_events, $ 
                       rotate = rotate, $
                       group_leader = group_leader, $
                       _extra = extra
-  
+
+  if n_params() eq 0 || ~obj_valid(model) || ~obj_isa(model, 'IDLGRMODEL') then begin
+     print, 'calling sequence:'
+     print, 'obj = obj_new("pzwin", model, [xrange = xrange, yrange = yrange, zrange = zrange"'
+     print, '               /rotate, group_leader = group_leader, _extra = extra])'
+     return, 0
+  endif
+
   ;- set up view
   object_bounds, model, xra, yra, zra
   rect = [xra[0], yra[0], range(xra), range(yra)]
@@ -483,13 +506,9 @@ function pzwin::init, model, parent, standalone = standalone, $
   if keyword_set(rotate) then $
      view->setProperty, zclip = zrange
   ;- set up widgets
-  if keyword_set(standalone) then begin 
-     base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3, $
+  base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3, $
                         /tlb_size_events, group_leader = group_leader, mbar = mbar)
-  endif else begin
-     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', $
-                        /col, frame = 3, mbar = mbar)
-  endelse
+  
   ;- a dummy base to hold the uvalue
   dummy = widget_base(base)
 
@@ -512,8 +531,7 @@ function pzwin::init, model, parent, standalone = standalone, $
                '2\Fix z axis']
   menu = cw_pdmenu(mbar, menu_desc, /mbar, /return_full_name)
   widget_control, mbar, set_uvalue='mbar'
-;  file = widget_button(base2, value='File', uvalue='FILE')
-
+  
   ;-button bar
   file = file_which('move.bmp')
   if ~file_test(file) then message, 'cannot find move.bmp'
@@ -572,10 +590,10 @@ function pzwin::init, model, parent, standalone = standalone, $
   self.mbar = mbar
   self.buttonbase = base2
   self.drawbase = base3
-  self.parent = keyword_set(standalone) ? base : parent
   self.view_cen = cen
   self.view_wid = wid
   self.last_render=0.
+  self.listen = 1
   self.standalone = keyword_set(standalone)
   self.isImage = keyword_set(image)
   self.is3D = keyword_set(rotate)
@@ -585,13 +603,13 @@ function pzwin::init, model, parent, standalone = standalone, $
   child = widget_info(base, /child)
   widget_control, child, set_uvalue = self, $
                   kill_notify='pzwin_kill'
-
-  if keyword_set(standalone) then begin
-     widget_control, base, /realize
-     xmanager, 'pzwin', base, /no_block
-  endif
   
   return, 1
+end
+
+pro pzwin::run
+  widget_control, self.base, /realize
+  xmanager, 'pzwin', self.base, /no_block
 end
 
 pro pzwin__define
@@ -605,9 +623,8 @@ pro pzwin__define
           image:obj_new(), $     ;- the CNBgrImage object, if isImage is true
           
           ;-widgets
-          parent:0L, $          ;- widget into which pzwin is embedded (or base)
           base:0L, $            ;- root of the pzwin widget hierarchy
-          mbar:0L, $        ;- widget base for menubar
+          mbar:0L, $            ;- widget base for menubar
           buttonbase:0L, $      ;- widget base for buttons
           drawbase:0L, $        ;- widget base for draw
           translateButton:0L, $
@@ -639,8 +656,9 @@ pro pzwin__define
           debug: 0B, $
           redraw:0B, $           ;- request for redraw command
           updatePolys:0B, $      ;- request to re-order polygons for 3d polygons
-
-
+          listen: 0B, $          ;- should other widgets listen to events from us?
+          old_listen:0B, $       ;- value of listen before dragging started
+          drag:0B, $             ;- drag bitflag used in check_listen
           ;- other state info
           modifiers:0B, $       ;- a keyboard modifier filter used to ignore events
           view_cen:[0.,0.], $   ;- center of viewport, in data coords

@@ -52,49 +52,6 @@
 ;  September 2010: Written by Chris Beaumont.
 ;-
 
-;+
-; PURPOSE:
-;  This function is a wrapper to process widget events. It calls the
-;  object method.
-;-
-function slice3_event, event
-  widget_control, event.top, get_uvalue = obj
-  return, obj->event(event)
-end
-
-;+
-; PURPOSE:
-;  This procedure is a wrapper to process widget events. It calls the
-;  object method
-;-
-pro slice3_event, event
-  junk = slice3_event(event)
-end
-
-
-;+
-; PURPOSE:
-;  This procedure destroys the widget hierarchy, and frees heap
-;  memory. 
-;-
-pro slice3_kill, id
-  widget_control, id, get_uvalue = obj
-  help, obj, obj_valid(obj)
-  obj_destroy, obj
-  help, obj, obj_valid(obj)
-end
-
-
-;+
-; PURPOSE:
-;  This proedure realizes the widget, and starts event handling. 
-;-
-pro slice3::run
-  widget_control, self.base, /realize, get_uvalue=uvalue
-  xmanager, 'slice3', self.base, /no_block, $
-            cleanup = 'slice3_kill'
-end
-
 
 ;+
 ; PURPOSE:
@@ -110,53 +67,47 @@ end
 ;  Sep 2010: Written by Chris Beaumont
 ;-
 function slice3::event, event, draw_event = draw_event
-  widget_control, event.top, get_uvalue = obj
-  drawid = self.win->get_widget_id()
-  case event.id of
-     self.slider: begin ;- slice adjustment
-        self->update_images
-     end
-     self.base: begin           ;- resize events
-        g = widget_info(self.base, /geometry)
-        g2 = widget_info(self.draw_base, /geometry)
-        ratio = 1. * g2.scr_xsize / g2.scr_ysize
-        
-        x1 = g.scr_xsize & y1 = x1 /ratio
-        y2 = g.scr_ysize & x2 = y2 * ratio
-        if y1 le g.scr_ysize then begin
-           self.win->resize, x1, y1
-        endif else begin
-           self.win->resize, x2, y2
-        endelse
-        self.win->request_redraw
-     end  
-     drawid: begin
-        x = event.x
-        y = event.y
-        widget_control, self.slider, get_value = z
-        draw_event = {slice3_event, $
-                      ID:self.base, TOP:event.top, $
-                      HANDLER:0L, $
-                      base:self.base, $
-                      x:x, y:y, z:z, $
-                      ch:event.ch, $
-                      key:event.key, $
-                      press:event.press, $
-                      release:event.release, $
-                      LEFT_CLICK:event.LEFT_CLICK, $
-                      LEFT_DRAG:event.LEFT_DRAG, $
-                      LEFT_RELEASE:event.LEFT_RELEASE, $
-                      RIGHT_CLICK: event.RIGHT_CLICK, $
-                      RIGHT_DRAG: event.RIGHT_DRAG, $
-                      RIGHT_RELEASE: event.RIGHT_RELEASE}
-        if self.widget_listener ne 0 then $
-           widget_control, self.widget_listener, $
-                           send_event = draw_event
-     end
-     else:
-  endcase
+
+  drawid = self.base
+  if event.id eq self.slider then begin
+     self->update_images 
+     return, 0
+  endif
+  result = self->pzwin::event(event)
 
   return, 0
+end
+
+pro slice3::resize, x, y
+  print, 'resizing'
+  widget_control, self.base, update = 0
+
+  b_g = widget_info(self.buttonbase, /geom)
+  s_g = widget_info(self.slider, /geom)
+  
+  pad = 3.
+  xnew = x - pad
+  ynew =  y - b_g.ysize - s_g.ysize - 5*pad
+
+  x1 = xnew & y1 = x1 * self.aspectRatio
+  y2 = ynew & x2 = y2 / self.aspectRatio
+  if x1 lt y1 then begin
+     xnew = x1
+     ynew = y1
+  endif else begin
+     xnew = x2
+     ynew = y2
+  endelse
+        
+
+  widget_control, self.buttonbase, xsize = xnew
+  widget_control, self.draw, xsize = xnew, $
+                  ysize = ynew
+  widget_control, self.slider, xsize = xnew
+
+  widget_control, self.base, update = 1
+  self.redraw = 1
+
 end
 
 function slice3::get_images, ct
@@ -177,7 +128,7 @@ pro slice3::update_images
   for i = 0, ct - 1, 1 do $
      ims[i]->set_slice_index, index
 
-  self.win->request_redraw
+  self.redraw = 1
 end
 
 
@@ -193,33 +144,10 @@ pro slice3::add_image, image, alias = alias
   self.win->request_redraw
 end
 
-pro slice3::redraw, debug = debug
-  if keyword_set(debug) then print, 'slice3 redraw'
-  self.win->request_redraw, debug = debug
-end
-
-pro slice3::set_widget_listener, widget
-  self.widget_listener = widget
-end
-
-function slice3::add_graphics_atom, atom, pos = pos
-  self.model->add, atom, pos = pos
-end
-
-function slice3::remove_graphics_atom, atom
-  self.model->remove, atom
-end
-
 pro slice3::cleanup
-  print, 'cleanup'
-  obj_destroy, self.model
-  obj_destroy, self.win
-;  widget_control, self.base, /destroy
+  self->pzwin::cleanup
 end
 
-function slice3::get_widget_id
-  return, self.base
-end
 
 function slice3::init, cube, slice = slice, group_leader = group_leader, $
                        widget_listener = widget_listener, $
@@ -240,43 +168,32 @@ function slice3::init, cube, slice = slice, group_leader = group_leader, $
   image = obj_new('CNBgrImage', cube, slice = slice, _extra = extra)
   
   sz = image->get_2d_size()
-  print, '2d size: ', sz
-
+  print, sz
   slice_sz = image->get_slice_size()
-  print, 'slice size: ', slice_sz
+  self.aspectRatio = 1. * sz[1] / sz[0]
 
-  slice = image->get_slice()
+  model = obj_new('IDLgrModel')
+  model-> add, image
 
-  self.model = obj_new('IDLgrModel')
-  self.model-> add, image
+  result = self->pzwin::init(model, xrange=[0,sz[0]], $
+                             yrange=[0,sz[1]], _extra = extra, image = image)
+  if result eq 0 then return, 0
 
-  tlb = widget_base(/column, /tlb_size_event, $
-                    title='Slice '+strtrim(slice,2), $
-                    group_leader = group_leader, _extra = extra)
-  self.draw_base = widget_base(tlb, _extra = extra)
-  self.win = obj_new('pzwin', self.model, self.draw_base, $
-                     xrange = [0, sz[0]], $
-                     yrange = [0, sz[1]], $
-                     image = image, /keyboard_events)
-  self.slider = widget_slider(tlb, min = 0, max = (slice_sz-1)>1, $
-                         value = slice_sz/2, /drag, sensitive = ~self.is2D)
-  self.base = tlb
-  widget_control, tlb, set_uvalue = self
+  self.slider = widget_slider(self.base, min = 0, max = (slice_sz-1)>1, $
+                              value = slice_sz/2, /drag, sensitive = ~self.is2D)
 
-  if keyword_set(widget_listener) then self.widget_listener=widget_listener
+;  if keyword_set(widget_listener) then self.widget_listener=widget_listener
 
   return, 1
 end
 
 pro slice3__define
   data = {slice3, $
-          base:0L, $            ;- top level base
+          inherits pzwin, $
           slider:0L, $          ;- slider widget id
-          draw_base:0L, $       ;- base which holds pzwin
-          model:obj_new(), $    ;- model object, holds all the image cubes
-          win:obj_new(), $      ;- pzwin object
           widget_listener:0L,$  ;- a widget to which this object sends events
-          is2D:0B $             ;- is the data 2D instead of 3D?
+          is2D:0B, $             ;- is the data 2D instead of 3D?
+          aspectRatio:0. $
          }
 end
 
@@ -285,9 +202,10 @@ pro s_test_event, event
 end
 
 pro s_test
-;  im = rebin(dist(100), 100, 100, 100)
-  ;- 2D case
-  im = dist(256)
-  s = obj_new('slice3', im, slice = 2)
+  m = fltarr(100,100,100)
+  indices, m, x, y, z
+  m = (x-50.)^2 + (y-50.)^2 + (z-50.)^2
+  m *= sin(x/5.) * sin(y/10. - 10*sin(z/10.))
+  s = obj_new('slice3', m, slice = 2)
   s->run
 end
