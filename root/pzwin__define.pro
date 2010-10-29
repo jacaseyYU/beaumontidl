@@ -92,6 +92,8 @@ pro pzwin::request_redraw, debug = debug
 end
 
 function pzwin::event, event
+
+  ;- widget timer events tell us when to update display
   if tag_names(event, /structure_name) eq 'WIDGET_TIMER' then begin
      self->redraw
      return, 1
@@ -99,18 +101,21 @@ function pzwin::event, event
 
   ;- in standalone mode, handle resize events
   if tag_names(event, /struct) eq 'WIDGET_BASE' then begin
+     print, 'BASE EVENT!!!'
      self->resize, event.x, event.y
+     return, 1
+  endif
+
+  ;- menu events
+  if event.id eq self.mbar then begin
+     print, 'menu'
      return, 1
   endif
 
   widget_control, self.draw, get_value = win
   widget_control, event.id, get_uvalue = uval
-
+  help, uval
   case uval of
-     'FILE': begin
-        print, 'doing nothing'
-        return, 1
-     end
      'ROTATE': begin
         self->setButton, /rotate
         return, 1
@@ -133,113 +138,14 @@ function pzwin::event, event
         junk = win->pickdata(self.view, self.model, [event.x, event.y], $
                              xyz)
         haveTransform = self.trackball->update(event, transform=qmat)
-
+        info = {win:win, g:g, outside:outside, xyz:xyz, haveTransform:haveTransform, $
+                qmat:haveTransform ? qmat : 0}
         case event.type of
-           0: begin             ;- button press
-              if event.press eq 1 then begin
-                 self.l_drag = 1
-                 if self.doRescale then begin
-                    self.rescale_plot = obj_new('idlgrplot', $
-                                                [event.x, event.x], $
-                                                [event.y, event.y], $
-                                                color=[255,0,0])
-                    self.rescale_model->add, self.rescale_plot
-                 endif
-              endif
-              if event.press eq 4 then self.r_drag = 1
-              if self.l_drag && self.doRotate then self->toggleWireframe
-              self.anchor = [event.x, event.y]
-           end
-           1: begin ;- button release
-              if self.l_drag && self.doRotate then self->toggleWireframe
-              wasL = self.l_drag eq 1B
-              self.l_drag = 0B  
-              self.r_drag = 0B
-              if self.updatePolys then self->updatePolys
-              if self.doRescale && wasL then begin
-                 self.rescale_model->remove, self.rescale_plot
-                 self.redraw = 1
-                 obj_destroy, self.rescale_plot
-                 old = self.anchor
-                 new = [event.x, event.y]
-                 cen = (old + new) / 2
-                 wid = abs(old - new)
-                 if new[0] gt old[0] && min(wid) gt 10 then begin
-                    g1 = widget_info(self.draw, /geom)
-                    delta = cen - [g1.xsize/2, g1.ysize/2]
-                    delta = delta / [g1.xsize, g1.ysize] * self.view_wid
-                    magnify = wid / [g1.xsize, g1.ysize]
-                    if self.isImage then magnify[1] = magnify[0]
-                    self.view_cen += delta
-                    self.view_wid *= magnify
-                    self->update_viewplane
-                    
-                 endif
-              endif
-           end
-           2: begin             ;- mouse motion
-              if ~self.l_drag && ~self.r_drag then break
-              if (self.modifiers ne 0) && $
-                 (event.modifiers and self.modifiers) eq 0 then break
-            
-              self.redraw = 1
-
-              ;-rotating, translate, or rescale?
-              if self.doRotate then begin
-                 if haveTransform ne 0 then begin
-                    self.model->getProperty, transform=t
-                    self.model->setProperty, transform=t#qmat
-                    self.updatePolys = 1
-                 endif
-              endif else if self.doTranslate then begin
-                 delta = [event.x, event.y] - self.anchor
-                 g1 = widget_info(self.draw, /geom)
-                 delta = delta / [g1.xsize, g1.ysize] * self.view_wid
-
-                 ;- left mouse dragging pans
-                 if self.l_drag then begin
-                    self.view_cen = self.view_cen - delta
-                    self.anchor = [event.x, event.y]
-                    self->update_viewplane
-                 endif
-              endif else if self.doreScale && self.l_drag then begin
-                 ;- update rescale box
-                 junk = win->pickdata(self.view, self.rescale_model, $
-                                           [event.x, event.y], xyz1)
-                 junk = win->pickdata(self.view, self.rescale_model, $
-                                    self.anchor, xyz2)
-                 
-                 ;- if this is an image, preserve the aspect ratio
-                 if self.isImage then xyz1[1] = xyz2[1] + (xyz1[0] - xyz2[0]) * $
-                                               self.view_wid[1]/self.view_wid[0] * $
-                                                sign(xyz1[1] - xyz2[1])
-                 
-                 x = [xyz1[0], xyz2[0], xyz2[0], xyz1[0], xyz1[0]]
-                 y = [xyz1[1], xyz1[1], xyz2[1], xyz2[1], xyz1[1]]
-                 if x[0] lt x[1] then x*=!values.f_nan
-
-                 self.rescale_plot->setProperty, $
-                    datax= x, datay = y
-              endif
-
-              ;- right mouse drag stretches an image
-              if self.r_drag && self.isImage && ~outside then begin
-                 g = widget_info(self.draw, /geom)
-                 bias = 0 > (1. * event.x / g.scr_xsize) < 1
-                 contrast = 0 > (1. * event.y / g.scr_ysize) < 1
-                 self.image->set_stretch, bias = bias, contrast = contrast
-              endif
-           end
-           5: begin             ;-keyboard release
-              if ~event.release then break
-              case strupcase(event.ch) of
-                 'R': if self.is3D then self->setButton, /rotate
-                 'T': self->setButton, /translate
-                 'Y': self->setButton, /resize
-                 else:
-              endcase
-           end
-           6:                   ;-keyboard release
+           0: self->button_press_event, event
+           1: self->button_release_event, event
+           2: self->button_motion_event, event, info
+           5: self->keyboard_event, event
+           6: ;- non-ascii key
            7: begin             ;- wheel motion
               self.redraw = 1
               zoomIn = event.clicks gt 0
@@ -264,6 +170,113 @@ function pzwin::event, event
             modifiers:event.modifiers, ch:event.ch, key:event.key}
 
   return, result
+end
+
+pro pzwin::button_press_event, event, info
+  if event.press eq 1 then begin
+     self.l_drag = 1
+     if self.doRescale then begin
+        self.rescale_plot = obj_new('idlgrplot', $
+                                    [event.x, event.x], $
+                                    [event.y, event.y], $
+                                    color=[255,0,0])
+        self.rescale_model->add, self.rescale_plot
+     endif
+  endif
+  if event.press eq 4 then self.r_drag = 1
+  if self.l_drag && self.doRotate then self->toggleWireframe
+  self.anchor = [event.x, event.y]
+end
+
+pro pzwin::button_release_event, event
+  if self.l_drag && self.doRotate then self->toggleWireframe
+  wasL = self.l_drag eq 1B
+  self.l_drag = 0B  
+  self.r_drag = 0B
+  if self.updatePolys then self->updatePolys
+  if self.doRescale && wasL then begin
+     self.rescale_model->remove, self.rescale_plot
+     self.redraw = 1
+     obj_destroy, self.rescale_plot
+     old = self.anchor
+     new = [event.x, event.y]
+     cen = (old + new) / 2
+     wid = abs(old - new)
+     if new[0] gt old[0] && min(wid) gt 10 then begin
+        g1 = widget_info(self.draw, /geom)
+        delta = cen - [g1.xsize/2, g1.ysize/2]
+        delta = delta / [g1.xsize, g1.ysize] * self.view_wid
+        magnify = wid / [g1.xsize, g1.ysize]
+        if self.isImage then magnify[1] = magnify[0]
+        self.view_cen += delta
+        self.view_wid *= magnify
+        self->update_viewplane      
+     endif
+  endif
+end
+
+pro pzwin::button_motion_event, event, info
+  if ~self.l_drag && ~self.r_drag then return
+  if (self.modifiers ne 0) && $
+     (event.modifiers and self.modifiers) eq 0 then return
+  
+  self.redraw = 1
+  
+  ;-rotating, translate, or rescale?
+  if self.doRotate then begin
+     if info.haveTransform ne 0 then begin
+        self.model->getProperty, transform=t
+        self.model->setProperty, transform=t#info.qmat
+        self.updatePolys = 1
+     endif
+  endif else if self.doTranslate then begin
+     delta = [event.x, event.y] - self.anchor
+     g1 = widget_info(self.draw, /geom)
+     delta = delta / [g1.xsize, g1.ysize] * self.view_wid
+     
+  ;- left mouse dragging pans
+     if self.l_drag then begin
+        self.view_cen = self.view_cen - delta
+        self.anchor = [event.x, event.y]
+        self->update_viewplane
+     endif
+  endif else if self.doreScale && self.l_drag then begin
+     ;- update rescale box
+     junk = info.win->pickdata(self.view, self.rescale_model, $
+                          [event.x, event.y], xyz1)
+     junk = info.win->pickdata(self.view, self.rescale_model, $
+                          self.anchor, xyz2)
+     
+     ;- if this is an image, preserve the aspect ratio
+     if self.isImage then xyz1[1] = xyz2[1] + (xyz1[0] - xyz2[0]) * $
+                                    self.view_wid[1]/self.view_wid[0] * $
+                                    sign(xyz1[1] - xyz2[1])
+     
+     x = [xyz1[0], xyz2[0], xyz2[0], xyz1[0], xyz1[0]]
+     y = [xyz1[1], xyz1[1], xyz2[1], xyz2[1], xyz1[1]]
+     if x[0] lt x[1] then x*=!values.f_nan
+     
+     self.rescale_plot->setProperty, $
+        datax= x, datay = y
+  endif
+  
+  ;- right mouse drag stretches an image
+  if self.r_drag && self.isImage && ~info.outside then begin
+     g = widget_info(self.draw, /geom)
+     bias = 0 > (1. * event.x / g.scr_xsize) < 1
+     contrast = 0 > (1. * event.y / g.scr_ysize) < 1
+     self.image->set_stretch, bias = bias, contrast = contrast
+  endif
+end
+
+pro pzwin::keyboard_event, event
+  if ~event.release then return
+  case strupcase(event.ch) of
+     'R': if self.is3D then self->setButton, /rotate
+     'T': self->setButton, /translate
+     'Y': self->setButton, /resize
+     else:
+  endcase         
 end
 
 pro pzwin::setButton, translate = translate, rotate = rotate, resize = resize
@@ -340,14 +353,13 @@ end
 ;- resizes widgets, when tlb is resized to xsz, ysz
 pro pzwin::resize, xsz, ysz
   widget_control, self.base, update = 0
-  g1 = widget_info(self.menubase, /geom)
+  g1 = widget_info(self.mbar, /geom)
   g2 = widget_info(self.buttonbase, /geom)
   pad = 3.
-  widget_control, self.menubase, xsize = xsz - pad
+  widget_control, self.mbar, xsize = xsz - pad
   widget_control, self.buttonbase, xsize = xsz - pad
   widget_control, self.draw, xsize = xsz - pad, ysize = ysz - g1.ysize - g2.ysize - 5 * pad
   g = widget_info(self.base, /geom)
-  self.base_sz = [g.scr_xsize, g.scr_ysize]
 
   widget_control, self.base, update = 1
   self->new_trackball
@@ -473,19 +485,33 @@ function pzwin::init, model, parent, standalone = standalone, $
   ;- set up widgets
   if keyword_set(standalone) then begin 
      base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3, $
-                        /tlb_size_events, group_leader = group_leader)
+                        /tlb_size_events, group_leader = group_leader, mbar = mbar)
   endif else begin
-     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3)
+     base = widget_base(parent, event_func='pzwin_event', notify_realize='pzwin_realize', $
+                        /col, frame = 3, mbar = mbar)
   endelse
   ;- a dummy base to hold the uvalue
   dummy = widget_base(base)
 
   ;-3 rows of bases
-  base1 = widget_base(base,/row, xpad = 0, ypad = 0)
   base2 = widget_base(base,/row, xpad = 0, ypad = 0, frame = 3)
   base3 = widget_base(base, xpad = 0, ypad = 0, frame = 3)
 
   ;- menu bar
+  self.mbar = mbar
+  menu_desc = ['1\File', $
+               '0\Save as image', $
+               '0\Save view', $
+               '2\Save model', $
+               '1\View', $
+               '0\Reset', $
+               '1\3D rotation', $
+               '0\reset', $
+               '0\Fix x axis', $
+               '0\Fix y axis', $
+               '2\Fix z axis']
+  menu = cw_pdmenu(mbar, menu_desc, /mbar, /return_full_name)
+  widget_control, mbar, set_uvalue='mbar'
 ;  file = widget_button(base2, value='File', uvalue='FILE')
 
   ;-button bar
@@ -543,7 +569,7 @@ function pzwin::init, model, parent, standalone = standalone, $
   self.view = view
   self.draw = draw
   self.base = base
-  self.menubase = base1
+  self.mbar = mbar
   self.buttonbase = base2
   self.drawbase = base3
   self.parent = keyword_set(standalone) ? base : parent
@@ -581,7 +607,7 @@ pro pzwin__define
           ;-widgets
           parent:0L, $          ;- widget into which pzwin is embedded (or base)
           base:0L, $            ;- root of the pzwin widget hierarchy
-          menubase:0L, $        ;- widget base for menubar
+          mbar:0L, $        ;- widget base for menubar
           buttonbase:0L, $      ;- widget base for buttons
           drawbase:0L, $        ;- widget base for draw
           translateButton:0L, $
@@ -597,27 +623,31 @@ pro pzwin__define
           bmp_resize_deselect:bytarr(20,20,3), $
           bmp_resize_select:bytarr(20,20,3), $
 
-          ;- rescale objects
+          ;- rescale objects. Used to draw a box when rescaling
           rescale_model:obj_new(), $
           rescale_plot:obj_new(), $
   
-          base_sz:[0., 0.], $   ;- size of base widget
-          view_cen:[0.,0.], $   ;- center of viewport, in data coords
-          view_wid:[0.,0.], $   ;- width of viewport, in data coords
+          ;- bit flags
           doRotate:0B, $        ;- mouse motion rotates?
           doTranslate:0B, $     ;- mouse motion translates?
           doRescale:0B, $       ;- mouse motion rescales?
           l_drag:0B, $          ;- left dragging?
           r_drag:0B, $          ;- right dragging
-          anchor:[0., 0.], $    ;- cursor pos at start of drag
-          last_render:0D, $     ;- time of last render
           standalone:0B, $      ;- widget a standalone object?
           isImage:0B, $         ;- does the model object hold a CNBgrImage object?
           is3D:0B, $            ;- is the graphic a rotateable, 3D model?
-          updatePolys:0B, $     ;- request to re-order polygons for 3d polygons
           debug: 0B, $
           redraw:0B, $           ;- request for redraw command
-          modifiers:0B $         ;- a keyboard modifier filter used to ignore events
+          updatePolys:0B, $      ;- request to re-order polygons for 3d polygons
+
+
+          ;- other state info
+          modifiers:0B, $       ;- a keyboard modifier filter used to ignore events
+          view_cen:[0.,0.], $   ;- center of viewport, in data coords
+          view_wid:[0.,0.], $   ;- width of viewport, in data coords
+          anchor:[0., 0.], $    ;- cursor pos at start of drag
+          last_render:0D $      ;- systime of last render
+          
          }
 end
           
