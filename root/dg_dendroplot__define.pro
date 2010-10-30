@@ -1,5 +1,6 @@
 pro dg_dendroplot::set_substruct, index, substruct
-  
+  if ~self->dg_client::set_substruct(index, substruct) then return
+
   case 1 of
      substruct eq -1 : xy = leafplot_xy(self.ptr)
      substruct ge 0: xy = dplot_xy(self.ptr, substruct)
@@ -9,19 +10,20 @@ pro dg_dendroplot::set_substruct, index, substruct
   if ~obj_valid(self.plots[index]) then begin
      plot = obj_new('idlgrplot', xy[0,*], xy[1,*], $
                     color =  self.colors[*,index], $
-                    thick = 2)
+                    thick = 4)
      self.plots[index] = plot
-     self->pzwin::add_graphics_atom, plot
+     self->interwin::add_graphics_atom, plot
   endif else begin
      self.plots[index]->setProperty, datax = xy[0,*], $
                                              datay = xy[1,*]
   endelse
+  self.redraw = 1
 end
   
 function dg_dendroplot::event, event
 
-  ;- handle basic pzwin events
-  res = self->pzwin::event(event)
+  ;- handle basic interwin events
+  res = self->interwin::event(event)
 
 
   ;- determine which substruct we're pointing at
@@ -44,9 +46,8 @@ function dg_dendroplot::event, event
                             name='dg_dp_event')
   endelse
 
-  if relay && self.dg_has_listen then begin
-     print, 'sending result'
-     widget_control, self.dg_listen, send_event = result
+  if relay && self.listener gt 0 then begin
+     widget_control, self.listener, send_event = result
   endif
 
   return, result
@@ -54,59 +55,49 @@ function dg_dendroplot::event, event
 end
 
 function dg_dendroplot::init, ptr, color = color, $
-                              widget_listener = widget_listener, $
+                              listener = listener, $
                               _extra = extra
 
+  junk = self->dg_client::init(ptr, listener, color = color)
   dendro = dplot_obj(ptr, max((*ptr).clusters+1))
+
   yra = minmax((*ptr).height) + range((*ptr).height) * [-.05, .05]
   axis = obj_new('idlgraxis', direction = 1, range = yra)
   model = obj_new('IDLgrModel')
   model->add, dendro
 
-  if ~keyword_set(color) then $
-     color = transpose(fsc_color(['crimson', 'royalblue', 'orange', 'purple', $
-                                  'yellow', 'teal', 'brown', 'green'], /triple))
-
-
-  self.color = color
-  self.ptr = ptr
-  
-  help, widget_listener
-  if keyword_set(widget_listener) then begin
-     self.dg_has_listen = 1B
-     self.dg_listen = widget_listener
-  endif
-
-  return, self->pzwin::init(model, _extra = extra)
+  return, self->interwin::init(model, _extra = extra)
 
 
   return, 1
 end
 
 pro dg_dendroplot::cleanup
-  self->pzwin::cleanup
+  self->interwin::cleanup
   obj_destroy, [self.plots]
 end
 
 pro dg_dendroplot__define
-  data = { dg_dendroplot, inherits pzwin, $
-           plots:objarr(8), $
-           color:bytarr(3,8), $
-           ptr:ptr_new(), $
-           dg_has_listen: 0B, $
-           dg_listen:0L}
+  data = { dg_dendroplot, inherits interwin, $
+           inherits dg_client, $
+           plots:objarr(8)}
 end
 
 
 pro test_event, event
-  help, event
+  widget_control, event.top, get_uvalue = obj
+  obj->set_substruct, randomu(seed)*5, event.substruct
+  print, event.substruct
 end
+
 pro test
   restore, '~/dendro/ex_ptr_small.sav'
   tlb = widget_base()
   widget_control, tlb, /realize
-  xmanager, 'test', tlb, /no_block
-  dp = obj_new('dg_dendroplot', ptr, widget_listen = tlb)
+  dp = obj_new('dg_dendroplot', ptr, listen = tlb)
   dp->run
+  widget_control, tlb, set_uvalue = dp
+  xmanager, 'test', tlb, /no_block
+
 end
 

@@ -101,7 +101,7 @@ pro dendro_iso, state
   model = obj_new('idlgrmodel')
   model->add, obj
   model->add, light
-  win = obj_new('pzwin', model, /rot, /standalone, $
+  win = obj_new('interwin', model, /rot, /standalone, $
                 xra = minmax(v[0,*]), $
                 yra = minmax(v[1,*]))
 end
@@ -200,23 +200,7 @@ pro dendro_update_mask, state, id
   dendro_update_plot, state, subplot
 end
 
-pro dendro_delta_mask, state, id, add = add, subtract = subtract
-  ptr = state.ptr
-  doAdd = keyword_set(add) || ~keyword_set(subtract)
-  if id lt 0 || id ge n_elements((*ptr).cluster_label_h) then return
-  if (*ptr).cluster_label_h[id] eq 0 then return
-
-  if doAdd then begin
-     ind = (*ptr).cluster_label_ri[(*ptr).cluster_label_ri[id] : $
-                                      (*ptr).cluster_label_ri[id+1]-1]
-     (*state.mask)[(*ptr).x[ind], (*ptr).y[ind], (*ptr).v[ind]] or= ishft(1, state.mask_id)
-  endif else begin
-     ind = (*ptr).cluster_label_ri[(*ptr).cluster_label_ri[id] : $
-                                   (*ptr).cluster_label_ri[id+1]-1]
-     (*state.mask)[(*ptr).x[ind], (*ptr).y[ind], (*ptr).v[ind]] and= not ishft(1, state.mask_id)
-  endelse
-end
-
+  
 pro dendro_update_plot, state, subplot
   id = state.id
 
@@ -270,23 +254,13 @@ pro dendrogui, ptr
   ;bottomrow=widget_base(tlb, /column, frame = 3)
   xra = minmax((*ptr).xlocation) + range((*ptr).xlocation)*[-.05,.05]
   yra = minmax((*ptr).height) + range((*ptr).height)*[-.05,.05]
-  draw = obj_new('pzwin', model, tlb, $
+  draw = obj_new('interwin', model, tlb, $
                  xrange = xra, $
                  yrange = yra, $
                  /keyboard)
   model->add, obj_new('idlgraxis', direction=1, range=yra)
   
-  ;- slice views
-  z = obj_new('slice3', cubeptr, slice = 2, group_leader = tlb, xoffset = 1000, yoffset=500, $
-             widget_listen=tlb)
-
-
-  color = transpose(fsc_color(['crimson', 'royalblue', 'orange', 'purple', $
-                               'yellow', 'teal', 'brown', 'green'], /triple))
-  mask = ptr_new(byte(cube*0))
-  mim3 = obj_new('cnbgrmask', mask, alpha=.8, blend=[3,4], slice=2, $
-                 /noscale, nmask = 8, color = color)
-
+  
   z->add_image, mim3
   
   ;- state information
@@ -298,8 +272,8 @@ pro dendrogui, ptr
           tlb:tlb, $               ;-top level base holding dendro plot
           toprow:toprow, $         ;-base widget id holding the menubar
 
-          draw:draw, $             ;-pzwin for dendrogram plot
-          isowin:obj_new(), $      ;-pzwin for isosurface plot
+          draw:draw, $             ;-interwin for dendrogram plot
+          isowin:obj_new(), $      ;-interwin for isosurface plot
           dendro:dendro, $         ;-main dendrogram plot object
           subplot:objarr(8), $     ;-dendrogram substructure plot objects 
           model:model, $           ;-idlgrmodel holding dendrogram plots

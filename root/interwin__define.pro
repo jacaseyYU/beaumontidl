@@ -1,9 +1,9 @@
 ;+
 ; CLASS_NAME:
-;  pzwin
+;  interwin
 ;
 ; PURPOSE:
-;  A _P_annable and _Z_oomable _WIN_dow, to interact with graphics.
+;  A window to interact with graphical objects.
 ;
 ; CATEGORY:
 ;  Data visualization
@@ -12,86 +12,121 @@
 ;  None
 ;
 ; SUBCLASSES:
-;  None
+;  slice3, interplot
 ;
 ; DESCRIPTION:
-;  pzwin is created with a graphics model as input. It can either run
-;  as a standalone gui (set the /STANDALONE keyword) or embedded into
-;  a larger GUI. 
+;  interwin displays one or more graphics model objects in a
+;  window. Several interactions are supported, including panning,
+;  zooming, adjusting greyscale (for images), rotating (for 3D
+;  objects), and saving to file. Interwin is designed to be the base
+;  class for more specific interactive visualizations.
 ;
-;  If pzwin runs as a standalone application, the gui is immediately
-;  created and run in a new window.
+; EXAMPLE:
+;  object = obj_new('interwin', graphics_model)
+;  object->run
 ;
-;  The pzwin object is resizeable, but does not automatically size
-;  itself. Use the resize method to set the approximate total size of
-;  the pzwin (plot + buttons).
+; EVENTS RETURNED BY INTERWIN:
+;  If check_listen returns 1, then interwin::event returns an event
+;  structure containing details about the mouse location (in data
+;  coordinates), whether the mouse is clicking/dragging, pressing a
+;  key, etc. This event structure can be used by subclasses to create
+;  custom interactions, without having to parse widget events
+;  directly. 
 ;
-;  When running pzwin, left click-dragging drags the graphic. Mouse
-;  scrolling zooms in our out. Right-click dragging adjusts the
-;  greyscale when displaying a CNBgrImages.
+; HOW TO PROGRAMATICALLY UPDATE THE DISPLAY:
+;  If a subclass or other program wants to update the graphics display
+;  programatically, they should either
+;   1) set the DRAW instance variable to 1 (if a subclass), or
+;   2) call the request_redraw procedure. 
 ;
+;  Other programs should not call the REDRAW procedure
+;  directly. Interwin checks to make sure it doesn't update the
+;  display too frequently (which can bog down the system), and thus
+;  ocasionally ignores calls to redraw. Calling request_redraw, or
+;  setting draw=1, ensures that the redraw request will not be
+;  forgotten (though it may be postponed).
 ;
 ; METHODS:
-;  (p) denotes private method not intended for users
+;  Methods with an (*) are intended as "public." The remaining methods
+;  are used internally, and should not be called by other programs
 ;
-;  REQUEST_REDRAW:  Request a display update
-;  EVENT:          (p) Event handling reoutine
-;  RESIZE:         (p) Update the size of the draw window
-;  REDRAW:         (p) Updates display, if necessary
-;  ZOOM:           (p) Zoom in on the display
-;  UPDATE_VIEWPLANE: (p) Change center of display
-;  GET_MODEL:      Return graphics model
-;  SET_MODEL:      Set the graphics model
-;  GET_VIEW:       Get the graphics view
-;  SET_VIEW:       Set the graphics view
-;  ADD_GRAPHICS_ATOM: Add a graphics atom
-;  REMOVE_GRAPHICS_ATOM: Remove a graphics atom
-;  GET_DRAW:       Return the draw widget
-;  CLEANUP:        (p) Destroy the object and free heap memory
-;  INIT:           Create a new object
+;  (*)request_redraw: Schedule a graphics update
+;  (*)setbutton: Determine which of the translate, rotate, and resize
+;             buttons to activate
+;  (*)set_event_filter: Set a modifier key used to disable events
+;  (*)clear_event_filter: Remove event filter
+;  (*)resize: Update the size of the interwin window
+;  (*)get_model: Get models from the graphics tree
+;  (*)set_model: Set a new graphics model to display
+;  (*)get_view: Get the view object
+;  (*)add_graphics_atom: Insert a new graphic in the tree
+;  (*)remove_graphics_atom: Remove a graphic from the tree
+;  (*)get_draw: return draw object
+;  (*)run: Realize and run the widget hierarchy
+;  event: Main event handling loop
+;  button_press_event: handle button events
+;  button_release_event: handle button release events
+;  button_motion_event: handle mouse motion
+;  keyboard_event: handle keyboard events
+;  getpolygonobjects: Recursively search the graphics tree for
+;                     idlgrpolygon objects
+;  togglewireframe: Turn wireframe rendering of 3d shapes on/off
+;  updatepolys: Reorder polygons in the view so they are rendered in
+;               the proper order
+;  new_trackball: Create a new trackball for rotation
+;  redraw: Update the graphics display
+;  zoom: Zoom in/out
+;  update_viewplane: Change the size and location of the view window
+;  cleanup: De-allocate memory upon object destruction
+;  get_widget_id: Return the base widget of the interwin hierarchy
+;  check_listen: Update the listen status, and determine whether to
+;                propagate events up the widget hierarchy
+;  init: Create a new interwin object
 ;
 ; MODIFICATION HISTORY:
 ;  September 2010: Written by Chris Beaumont
 ;  October 2010: Added rotation functionality for 3d models. Change
 ;  how resize events work. cnb.
+;  October 30 2010: Substantially re-worked. Interwin now behaves as a
+;  standalone object, as opposed to a compound widget.
 ;-
 
 ;-----------------
 ; GUI Procedures (non-object)
-pro pzwin_realize, id
+pro interwin_realize, id
   ;- start the render loop
   child = widget_info(id, /child)
   widget_control, child, get_uvalue = info
   widget_control, info->get_draw(), timer=.03
 end
 
-pro pzwin_kill, id
+pro interwin_kill, id
   widget_control, id, get_uvalue = info
   obj_destroy, info
 end
 
-function pzwin_event, event
+function interwin_event, event
   compile_opt idl2
   child = widget_info(event.handler, /child)
   widget_control, child, get_uvalue = info
   return, info->event(event)
 end
 
-pro pzwin_event, event
-  junk = pzwin_event(event)
+pro interwin_event, event
+  junk = interwin_event(event)
 end
 ;--------------------
 
 ;--------------------
 ; GUI Procedures (object oriented)
-pro pzwin::request_redraw, debug = debug
+pro interwin::request_redraw, debug = debug
   self.redraw = 1
   if keyword_set(debug) then begin
      self.debug = 1
   endif
 end
 
-function pzwin::event, event
+function interwin::event, event
 
   ;- widget timer events tell us when to update display
   if tag_names(event, /structure_name) eq 'WIDGET_TIMER' then begin
@@ -157,7 +192,7 @@ function pzwin::event, event
   endcase                       ;- end of event identification
   
   ;-pass information up the hierarchy
-  result = {pzwin_event, ID: event.handler, TOP: event.top, HANDLER:0L, $
+  result = {interwin_event, ID: event.handler, TOP: event.top, HANDLER:0L, $
             x:xyz[0], y:xyz[1], $
             LEFT_CLICK: event.type eq 0 && event.press eq 1, $
             LEFT_DRAG: event.press eq 0 && self.l_drag, $
@@ -172,7 +207,7 @@ function pzwin::event, event
   return, self.listen ? result : 7
 end
 
-pro pzwin::button_press_event, event, info
+pro interwin::button_press_event, event, info
   if event.press eq 1 then begin
      self.l_drag = 1
      if self.doRescale then begin
@@ -188,7 +223,7 @@ pro pzwin::button_press_event, event, info
   self.anchor = [event.x, event.y]
 end
 
-pro pzwin::button_release_event, event
+pro interwin::button_release_event, event
   if self.l_drag && self.doRotate then self->toggleWireframe
   wasL = self.l_drag eq 1B
   self.l_drag = 0B  
@@ -215,7 +250,7 @@ pro pzwin::button_release_event, event
   endif
 end
 
-pro pzwin::button_motion_event, event, info
+pro interwin::button_motion_event, event, info
   if ~self.l_drag && ~self.r_drag then return
   if (self.modifiers ne 0) && $
      (event.modifiers and self.modifiers) eq 0 then return
@@ -269,7 +304,7 @@ pro pzwin::button_motion_event, event, info
   endif
 end
 
-pro pzwin::keyboard_event, event
+pro interwin::keyboard_event, event
   if ~event.release then return
   case strupcase(event.ch) of
      'R': if self.is3D then self->setButton, /rotate
@@ -279,7 +314,7 @@ pro pzwin::keyboard_event, event
   endcase         
 end
 
-pro pzwin::setButton, translate = translate, rotate = rotate, resize = resize
+pro interwin::setButton, translate = translate, rotate = rotate, resize = resize
   if keyword_set(translate) then begin
      self.doRotate = 0
      self.doTranslate = 1
@@ -304,16 +339,16 @@ pro pzwin::setButton, translate = translate, rotate = rotate, resize = resize
   endif else message, 'bug!'
 end
 
-pro pzwin::set_event_filter, control = control, shift = shift
+pro interwin::set_event_filter, control = control, shift = shift
   if keyword_set(shift) then self.modifiers = 1
   if keyword_set(control) then self.modifiers = 2
 end
 
-pro pzwin::clear_event_filter
+pro interwin::clear_event_filter
   self.modifiers=0
 end
 
-function pzwin::getPolygonObjects, count
+function interwin::getPolygonObjects, count
   objs = self.model->get(/all, count = ct)
   i = 0
   while i lt n_elements(objs) do begin
@@ -329,7 +364,7 @@ function pzwin::getPolygonObjects, count
   if count gt 0 then return, result else return, -1
 end
 
-pro pzwin::toggleWireframe
+pro interwin::toggleWireframe
   return
   polys = self->getPolygonObjects(ct)
   for i = 0, ct - 1, 1 do begin
@@ -338,7 +373,7 @@ pro pzwin::toggleWireframe
   endfor
 end
 
-pro pzwin::updatePolys
+pro interwin::updatePolys
   print, 'updating polygons'
   polys = self->getPolygonObjects(ct)
   self.model->getProperty, transform = t
@@ -351,7 +386,7 @@ pro pzwin::updatePolys
 end
 
 ;- resizes widgets, when tlb is resized to xsz, ysz
-pro pzwin::resize, xsz, ysz
+pro interwin::resize, xsz, ysz
   widget_control, self.base, update = 0
   g1 = widget_info(self.mbar, /geom)
   g2 = widget_info(self.buttonbase, /geom)
@@ -366,13 +401,13 @@ pro pzwin::resize, xsz, ysz
   self.redraw = 1
 end
 
-pro pzwin::new_trackball
+pro interwin::new_trackball
   obj_destroy, self.trackball
   g = widget_info(self.drawbase, /geom)
   self.trackball = obj_new('trackball', [g.xsize/2, g.ysize/2], (g.xsize < g.ysize) /2)
 end
 
-pro pzwin::redraw
+pro interwin::redraw
   compile_opt idl2
   t = systime(/seconds)
   max_rate = 20.
@@ -381,7 +416,7 @@ pro pzwin::redraw
 
   ;- avoid unnecessary redraws
   if ~self.redraw || 1. / (t - self.last_render) gt max_rate then return
-  if self.debug then print, 'pzwin draw'
+  if self.debug then print, 'interwin draw'
   widget_control, self.draw, get_value = win
   win->draw, self.view
   self.last_render = t
@@ -389,7 +424,7 @@ pro pzwin::redraw
   return
 end
 
-pro pzwin::zoom, zoomIn, x, y, xyz
+pro interwin::zoom, zoomIn, x, y, xyz
   widget_control, self.draw, get_value = win
   self.view_wid = self.view_wid * (zoomIn ? .98 : 1.02)
   self->update_viewplane
@@ -401,7 +436,7 @@ pro pzwin::zoom, zoomIn, x, y, xyz
 end
 
 
-pro pzwin::update_viewplane
+pro interwin::update_viewplane
   compile_opt idl2, hidden
 
   rect = [self.view_cen[0] - self.view_wid[0]/2., $
@@ -415,43 +450,43 @@ end
 ;-----------------------
 ; Non-GUI object methods
 
-function pzwin::get_model
+function interwin::get_model
   return, self.model
 end
 
-pro pzwin::set_model, model
+pro interwin::set_model, model
   self.view->remove, self.model
   obj_destroy, self.model
   self.model = model
   self.view->add, self.model
 end
 
-function pzwin::get_view
+function interwin::get_view
   return, self.view
 end
 
-pro pzwin::add_graphics_atom, atom, _extra = extra
+pro interwin::add_graphics_atom, atom, _extra = extra
   self.model->add, atom, _extra = extra
 end
 
-pro pzwin::remove_graphlics_atom, atom
+pro interwin::remove_graphics_atom, atom
   self.model->remove, atom
 end
 
-function pzwin::get_draw
+function interwin::get_draw
   return, self.draw
 end
 
-pro pzwin::cleanup
+pro interwin::cleanup
   obj_destroy, self.view
   obj_destroy, self.trackball
 end
 
-function pzwin::get_widget_id
+function interwin::get_widget_id
   return, self.base
 end
 
-pro pzwin::check_listen, event
+pro interwin::check_listen, event
    if event.LEFT_CLICK || event.RIGHT_CLICK then begin
      self.old_listen = self.listen
      self.listen = 0
@@ -467,7 +502,7 @@ pro pzwin::check_listen, event
   endif
 end
 
-function pzwin::init, model, $
+function interwin::init, model, $
                       xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
                       keyboard_events = keyboard_events, $ 
                       rotate = rotate, $
@@ -476,7 +511,7 @@ function pzwin::init, model, $
 
   if n_params() eq 0 || ~obj_valid(model) || ~obj_isa(model, 'IDLGRMODEL') then begin
      print, 'calling sequence:'
-     print, 'obj = obj_new("pzwin", model, [xrange = xrange, yrange = yrange, zrange = zrange"'
+     print, 'obj = obj_new("interwin", model, [xrange = xrange, yrange = yrange, zrange = zrange"'
      print, '               /rotate, group_leader = group_leader, _extra = extra])'
      return, 0
   endif
@@ -506,7 +541,7 @@ function pzwin::init, model, $
   if keyword_set(rotate) then $
      view->setProperty, zclip = zrange
   ;- set up widgets
-  base = widget_base(event_func='pzwin_event', notify_realize='pzwin_realize', /col, frame = 3, $
+  base = widget_base(event_func='interwin_event', notify_realize='interwin_realize', /col, frame = 3, $
                         /tlb_size_events, group_leader = group_leader, mbar = mbar)
   
   ;- a dummy base to hold the uvalue
@@ -602,19 +637,19 @@ function pzwin::init, model, $
 
   child = widget_info(base, /child)
   widget_control, child, set_uvalue = self, $
-                  kill_notify='pzwin_kill'
+                  kill_notify='interwin_kill'
   
   return, 1
 end
 
-pro pzwin::run
+pro interwin::run
   widget_control, self.base, /realize
-  xmanager, 'pzwin', self.base, /no_block
+  xmanager, 'interwin', self.base, /no_block
 end
 
-pro pzwin__define
+pro interwin__define
 
-  data = {pzwin, $
+  data = {interwin, $
 
           ;-objects
           model:obj_new(), $     ;- Model object. Provided on input
@@ -623,7 +658,7 @@ pro pzwin__define
           image:obj_new(), $     ;- the CNBgrImage object, if isImage is true
           
           ;-widgets
-          base:0L, $            ;- root of the pzwin widget hierarchy
+          base:0L, $            ;- root of the interwin widget hierarchy
           mbar:0L, $            ;- widget base for menubar
           buttonbase:0L, $      ;- widget base for buttons
           drawbase:0L, $        ;- widget base for draw
@@ -681,7 +716,8 @@ pro test_im
   yrange = [0,255]
   model->add, plot
   
-  x = obj_new('pzwin', model, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard)  
+  x = obj_new('interwin', model, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard)  
+  x->run
 end
 
 pro test_embed_event, ev
@@ -689,7 +725,7 @@ pro test_embed_event, ev
   if tag_names(ev, /struct) eq 'WIDGET_BASE' then begin
      pad = 3
      g = widget_info(state.button, /geom)
-     state.pzwin->resize, ev.x - pad, ev.y - g.ysize - pad
+     state.interwin->resize, ev.x - pad, ev.y - g.ysize - pad
   endif
 end
 
@@ -706,12 +742,12 @@ pro test_embed
   yrange = [-1,1]
   model->add, plot
 
-  obj = obj_new('pzwin', model, pz_base, xrange=[0,11],yrange=[-1,1], /keyboard)
+  obj = obj_new('interwin', model, pz_base, xrange=[0,11],yrange=[-1,1], /keyboard)
   button = widget_button(tlb, value='Hi There', xsize = 4)
 
 
   widget_control, tlb, /realize
-  state={plot:plot, model:model, button:button, tlb:tlb, pzwin:obj, pz_base:pz_base}
+  state={plot:plot, model:model, button:button, tlb:tlb, interwin:obj, pz_base:pz_base}
   widget_control, tlb, set_uvalue = state
 
   xmanager, 'test_embed', tlb
@@ -750,5 +786,5 @@ pro test3d
   oTop->Add, oLight
   
   ; Place the model in the view.  
-  x = obj_new('pzwin', oTop, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard, /rotate  )
+  x = obj_new('interwin', oTop, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard, /rotate  )
 end
