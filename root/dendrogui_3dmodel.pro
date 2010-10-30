@@ -43,7 +43,7 @@ pro dendrogui_3dmodel, state
      state.isowin->set_model, m
      state.isowin->request_redraw
   endif else begin
-     state.isowin = obj_new('pzwin', m, /standalone, $
+     state.isowin = obj_new('interwin', m, /standalone, $
                             /rotate, /depth_test_disable, $
                             eye = 2 * max(sz[1:3]), shading=1, $
                             xrange = [0, sz[1]]-sz[1]/2., $

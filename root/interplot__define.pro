@@ -1,6 +1,6 @@
 pro interplot_event, event
   widget_control, event.top, get_uval = state
-  if tag_names(event, /struct) ne 'PZWIN_EVENT' then $
+  if tag_names(event, /struct) ne 'INTERWIN_EVENT' then $
      state->redraw
 end
 
@@ -44,7 +44,7 @@ end
 
 pro interplot::cleanup
   ptr_free, [self.data, self.subset_id, $
-             self.pzwin]
+             self.interwin]
 end
 
 pro interplot::setplotvar, plotindex, varindex
@@ -95,7 +95,7 @@ function interplot::init, data, subset = subset, $
   model->add, self.plotobj[0]
 
 
-  self.pzwin = obj_new('pzwin', model, tlb)
+  self.interwin = obj_new('interwin', model, tlb)
 
   base2 = widget_base(tlb, col = 1)
   r1 = widget_base(base2, /row)
@@ -135,7 +135,7 @@ pro interplot::redraw
      endelse
                                       
   endfor
-  self.pzwin->request_redraw
+  self.interwin->request_redraw
 end                          
 
 pro interplot::run
@@ -149,7 +149,7 @@ pro interplot__define
            data:ptr_new(), $
            subsets:replicate({subset}, 8), $
            subset_id:ptr_new(), $
-           pzwin:obj_new(), $
+           interwin:obj_new(), $
            model:obj_new(), $
            plotobj:objarr(8), $
            plotvar1:0, $

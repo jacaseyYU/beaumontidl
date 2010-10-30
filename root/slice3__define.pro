@@ -73,9 +73,22 @@ function slice3::event, event, draw_event = draw_event
      self->update_images 
      return, 0
   endif
-  result = self->pzwin::event(event)
-
-  return, 0
+  super = self->interwin::event(event)
+  if size(super, /tname) ne 'STRUCT' then return, 1
+  result = create_struct(super, 'Z', 0, $
+                         name = 'SLICE3_EVENT')
+  
+  widget_control, self.slider, get_value = index
+  if self.slice eq 0 then begin
+     x = index & y = result.x & z = result.y
+  endif else if self.slice eq 1 then begin
+     x = result.x & y = index & z = result.z
+  endif else begin
+     x = result.x & y = result.y & z = index
+  endelse
+  result.x = x & result.y = y & result.z = z
+  
+  return, result
 end
 
 pro slice3::resize, x, y
@@ -131,6 +144,10 @@ pro slice3::update_images
   self.redraw = 1
 end
 
+pro slice3::request_redraw
+  self->update_images
+  self.redraw = 1
+end
 
 pro slice3::remove_image, image
   self.model->remove, image
@@ -141,11 +158,12 @@ pro slice3::add_image, image, alias = alias
   image->set_slice_index, index
 
   self.model->add, image, alias = alias
-  self.win->request_redraw
+  self.redraw = 1
+
 end
 
 pro slice3::cleanup
-  self->pzwin::cleanup
+  self->interwin::cleanup
 end
 
 
@@ -171,11 +189,12 @@ function slice3::init, cube, slice = slice, group_leader = group_leader, $
   print, sz
   slice_sz = image->get_slice_size()
   self.aspectRatio = 1. * sz[1] / sz[0]
+  self.slice = slice
 
   model = obj_new('IDLgrModel')
   model-> add, image
 
-  result = self->pzwin::init(model, xrange=[0,sz[0]], $
+  result = self->interwin::init(model, xrange=[0,sz[0]], $
                              yrange=[0,sz[1]], _extra = extra, image = image)
   if result eq 0 then return, 0
 
@@ -189,16 +208,13 @@ end
 
 pro slice3__define
   data = {slice3, $
-          inherits pzwin, $
+          inherits interwin, $
           slider:0L, $          ;- slider widget id
+          slice:0, $            ;- dimension to slice through
           widget_listener:0L,$  ;- a widget to which this object sends events
           is2D:0B, $             ;- is the data 2D instead of 3D?
           aspectRatio:0. $
          }
-end
-
-pro s_test_event, event
-;  help, event, /struct
 end
 
 pro s_test
