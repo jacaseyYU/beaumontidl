@@ -167,8 +167,7 @@ pro slice3::cleanup
 end
 
 
-function slice3::init, cube, slice = slice, group_leader = group_leader, $
-                       widget_listener = widget_listener, $
+function slice3::init, cube, slice = slice, $
                        _extra = extra
 
   sz = size(cube)
@@ -183,7 +182,7 @@ function slice3::init, cube, slice = slice, group_leader = group_leader, $
   if ndim eq 2 and slice ne 2 then $
      message, '2D images must set slice=2'
 
-  image = obj_new('CNBgrImage', cube, slice = slice, _extra = extra)
+  image = obj_new('CNBgrImage', cube, slice = slice)
   
   sz = image->get_2d_size()
   print, sz

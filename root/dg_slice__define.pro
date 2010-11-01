@@ -1,10 +1,10 @@
 pro dg_slice::set_substruct, index, substruct
-  print, 'setting', index, substruct
   ptr = self.ptr
 
   venn = dendrovenn(self.substructs[index], substruct, (*ptr).clusters)
 
-  if ~self->dg_client::set_substruct(index, substruct) then return
+  self->dg_client::set_substruct, index, substruct, status
+  if ~status then return
 
   
   for i = 0, venn.anotbct -1, 1 do begin
@@ -47,7 +47,8 @@ function dg_slice::event, event
               (*ptr).v eq floor(super.z), ct)
   id = ct eq 0 ? -2 : (*ptr).cluster_label[ind[0]]
 
-  result = {DG_SLICE_EVENT, ID:event.id, TOP:event.top, HANDLER:event.handler, substruct:id} 
+  result = create_struct(super, 'substruct', id, $
+                       name='DG_SLICE_EVENT')
   if self.listener ne 0 then $
      widget_control, self.listener, send_event = result
   return, result
@@ -58,14 +59,14 @@ pro dg_slice::cleanup
   self->slice3::cleanup
 end
 
-function dg_slice::init, ptr, color = color, listener = listener
+function dg_slice::init, ptr, color = color, listener = listener, _extra = extra
   ;- make a cube
   cube = fltarr(max((*ptr).x), max((*ptr).y), max((*ptr).v))
   cube[(*ptr).x, (*ptr).y, (*ptr).v] = (*ptr).t
   cube = ptr_new(cube, /no_copy)
   self.mask = ptr_new(byte(*cube * 0), /no_copy)
 
-  junk = self->slice3::init(cube, slice = 2)
+  junk = self->slice3::init(cube, slice = 2, _extra = extra)
   junk = self->dg_client::init(ptr, listener, color = color)
 
   self->add_image, obj_new('cnbgrmask', self.mask, nmask=8, slice=2, $

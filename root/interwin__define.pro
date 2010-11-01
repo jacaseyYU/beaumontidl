@@ -127,16 +127,19 @@ pro interwin::request_redraw, debug = debug
 end
 
 function interwin::event, event
-
   ;- widget timer events tell us when to update display
   if tag_names(event, /structure_name) eq 'WIDGET_TIMER' then begin
      self->redraw
      return, 1
   endif
 
+  if event.id eq self.mbar then begin
+     self->menu_event, event
+     return, 1
+  endif
+
   ;- in standalone mode, handle resize events
   if tag_names(event, /struct) eq 'WIDGET_BASE' then begin
-     print, 'BASE EVENT!!!'
      self->resize, event.x, event.y
      return, 2
   endif
@@ -149,6 +152,7 @@ function interwin::event, event
 
   widget_control, self.draw, get_value = win
   widget_control, event.id, get_uvalue = uval
+  if n_elements(uval) eq 0 then return, 1
   case uval of
      'ROTATE': begin
         self->setButton, /rotate
@@ -188,7 +192,7 @@ function interwin::event, event
            else:
         endcase                 ;- end of draw events
      end
-     else:
+     else: return, 1
   endcase                       ;- end of event identification
   
   ;-pass information up the hierarchy
@@ -204,7 +208,33 @@ function interwin::event, event
             modifiers:event.modifiers, ch:event.ch, key:event.key}
 
   self->check_listen, result
-  return, self.listen ? result : 7
+  return, (self.listen || event.type eq 5 || event.type eq 6) ? result : 7
+end
+
+pro interwin::menu_event, event
+  case event.value of
+     'File.Save as image': 
+     'File.Save view': begin
+        file=dialog_pickfile(default_extension='vew', /write, /overwrite_prompt)
+        view = self.view
+        if file ne '' then save, view, file=file
+        return
+     end
+     'File.Save model': begin
+        file=dialog_pickfile(default_extension='mod', /write, /overwrite_prompt)
+        model = self.model
+        if file ne '' then save, model, file=file
+        return
+     end
+     'View.Reset': 
+     'View.3D rotation.reset': begin
+        self.model->setProperty, tran=[[1.,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+     end
+     'View.3D rotation.Fix x axis':self->new_trackball, axis=0
+     'View.3D rotation.Fix y axis':self->new_trackball, axis=1
+     'View.3D rotation.Fix z axis':self->new_trackball, axis=2
+     else:
+  endcase
 end
 
 pro interwin::button_press_event, event, info
@@ -401,10 +431,11 @@ pro interwin::resize, xsz, ysz
   self.redraw = 1
 end
 
-pro interwin::new_trackball
+pro interwin::new_trackball, axis = axis
   obj_destroy, self.trackball
   g = widget_info(self.drawbase, /geom)
-  self.trackball = obj_new('trackball', [g.xsize/2, g.ysize/2], (g.xsize < g.ysize) /2)
+  self.trackball = obj_new('trackball', [g.xsize/2, g.ysize/2], (g.xsize < g.ysize) /2, $
+                          axis = axis, constrain = n_elements(axis) ne 0)
 end
 
 pro interwin::redraw
@@ -503,11 +534,11 @@ pro interwin::check_listen, event
 end
 
 function interwin::init, model, $
-                      xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
-                      keyboard_events = keyboard_events, $ 
-                      rotate = rotate, $
-                      group_leader = group_leader, $
-                      _extra = extra
+                         xrange = xrange, yrange = yrange, zrange = zrange, image = image, $
+                         xoffset = xoffset, yoffset = yoffset, $
+                         rotate = rotate, $
+                         group_leader = group_leader, $
+                         _extra = extra
 
   if n_params() eq 0 || ~obj_valid(model) || ~obj_isa(model, 'IDLGRMODEL') then begin
      print, 'calling sequence:'
@@ -542,7 +573,8 @@ function interwin::init, model, $
      view->setProperty, zclip = zrange
   ;- set up widgets
   base = widget_base(event_func='interwin_event', notify_realize='interwin_realize', /col, frame = 3, $
-                        /tlb_size_events, group_leader = group_leader, mbar = mbar)
+                        /tlb_size_events, group_leader = group_leader, mbar = mbar, $
+                     xoffset = xoffset, yoffset = yoffset)
   
   ;- a dummy base to hold the uvalue
   dummy = widget_base(base)
@@ -770,9 +802,9 @@ pro test3d
   zMax2 = zMax + 1 
 
   ; Compute coordinate conversion to normalize.
-  xs = [-0.5,1.0/xMax]
-  ys = [-0.5,1.0/yMax]
-  zs = [(-zMin2/(zMax2-zMin2))-0.5, 1.0/(zMax2-zMin2)]
+;  xs = [-0.5,1.0/xMax]
+;  ys = [-0.5,1.0/yMax]
+;  zs = [(-zMin2/(zMax2-zMin2))-0.5, 1.0/(zMax2-zMin2)]
   
   oSurface = OBJ_NEW('IDLgrSurface', zData, STYLE=2, SHADING=0, $
                      COLOR=[60,60,255], BOTTOM=[64,192,128], $
@@ -787,4 +819,5 @@ pro test3d
   
   ; Place the model in the view.  
   x = obj_new('interwin', oTop, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard, /rotate  )
+  x->run
 end
