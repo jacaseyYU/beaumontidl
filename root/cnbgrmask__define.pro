@@ -70,12 +70,7 @@ function cnbgrmask::init, mask, $
      first = 1
      for j = 0, ncolor - 1, 1 do begin
         if ~(ishft(i, -j) and 1) then continue
-        if first then begin
-           first = 0
-           lookup[*,i] = colors[*,j]
-        endif else begin
-           lookup[*,i] = .5 * lookup[*,i] + .5 * colors[*,j]
-        endelse
+        lookup[*,i] = colors[*,j]
      endfor
   endfor
   self.lookup = ptr_new(lookup)

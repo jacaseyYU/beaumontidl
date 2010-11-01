@@ -39,6 +39,10 @@ pro dendrogui_event, event
      'dsb': begin
         if obj_valid((*sptr).ds) then break
         (*sptr).ds = obj_new('dg_slice', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200)
+        restore, '~/perseus/catalogs/per_yso_model.sav'
+        o = model->get(/all)
+        model->remove, o[0]
+        (*sptr).ds->add_graphics_atom, o[0]
         (*sptr).ds->run
         dendrogui_sync_clients, sptr
      end
@@ -144,13 +148,12 @@ end
 
 pro dendrogui, ptr, data = data
 
-;  if n_elements(ptr) eq 0 then restore, '~/perseus/per_13co_dendro.sav'
-;  if n_elements(data) eq 0 then begin
-;     restore, '~/dendro/dprop.sav'
-;     data = result
-;  endif
-  if n_elements(ptr) eq 0 then restore, '~/dendro/ex_ptr_small.sav'
-  
+  if n_elements(ptr) eq 0 then begin
+     print, 'Calling sequence'
+     print, ' dendrogui, ptr, [data = data]'
+     return
+  end
+  if n_elements(data) eq 0 then message, /info, 'No external data provided'
   tlb = widget_base(/column)
   
   color = byte(transpose(fsc_color(['red', 'teal', 'orange', 'purple', 'yellow', $
@@ -178,7 +181,7 @@ pro dendrogui, ptr, data = data
   ;- viz buttons
   row = widget_base(tlb, /row)
   ddb = widget_button(row, value='Dendro', uval='ddb')
-  dpb = widget_button(row, value='Scatter', uval='dpb')
+  dpb = keyword_set(data) ? widget_button(row, value='Scatter', uval='dpb') : -1
   row2 = widget_base(tlb, /row)
   dsb = widget_button(row2, value='Slice', uvalue='dsb')
   dib = widget_button(row2, value='Iso', uvalue='dib')
@@ -203,5 +206,5 @@ pro dendrogui, ptr, data = data
   widget_control, tlb, set_uvalue = sptr
   widget_control, tlb, /realize
 
-  xmanager, 'dendrogui', tlb
+  xmanager, 'dendrogui', tlb, /no_block
 end
