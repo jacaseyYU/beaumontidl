@@ -74,7 +74,7 @@ function interplot::init, data, subset = subset, $
      self.subsets = sub
      for i = 0, n_elements(sub) - 1, 1 do begin
         s = obj_new('idlgrsymbol', 0, size = sub[i].symsize, $
-                    color = sub[i].color, alpha = sub[i].alpha)
+                    color = sub[i].color, alpha = sub[i].alpha, thick = 3)
         temp = self.subsets[i]
         temp.symbol = s
         self.subsets[i] = temp

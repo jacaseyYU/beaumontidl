@@ -1,5 +1,6 @@
 pro dg_dendroplot::set_substruct, index, substruct
-  if ~self->dg_client::set_substruct(index, substruct) then return
+  self->dg_client::set_substruct, index, substruct, status
+  if ~status then return
 
   case 1 of
      substruct eq -1 : xy = leafplot_xy(self.ptr)
@@ -10,9 +11,9 @@ pro dg_dendroplot::set_substruct, index, substruct
   if ~obj_valid(self.plots[index]) then begin
      plot = obj_new('idlgrplot', xy[0,*], xy[1,*], $
                     color =  self.colors[*,index], $
-                    thick = 4)
+                    thick = 2)
      self.plots[index] = plot
-     self->interwin::add_graphics_atom, plot
+     self->interwin::add_graphics_atom, plot, position = 0
   endif else begin
      self.plots[index]->setProperty, datax = xy[0,*], $
                                              datay = xy[1,*]
@@ -39,11 +40,9 @@ function dg_dendroplot::event, event
   endif 
   if relay then begin
      result = create_struct(res, 'substruct', substruct, $
-                            name='dg_dp_draw')
+                            name='dg_dendroplot_event')
   endif else begin
-     result = create_struct('ID', event.handler, 'TOP', event.top, $
-                            'HANDLER', event.handler, 'substruct', substruct, $
-                            name='dg_dp_event')
+     result = 1
   endelse
 
   if relay && self.listener gt 0 then begin
