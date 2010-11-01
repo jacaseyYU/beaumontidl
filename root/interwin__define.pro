@@ -395,7 +395,7 @@ function interwin::getPolygonObjects, count
 end
 
 pro interwin::toggleWireframe
-  return
+;  return
   polys = self->getPolygonObjects(ct)
   for i = 0, ct - 1, 1 do begin
      polys[i]->getProperty, style = s

@@ -70,7 +70,7 @@ function dg_slice::init, ptr, color = color, listener = listener, _extra = extra
   junk = self->dg_client::init(ptr, listener, color = color)
 
   self->add_image, obj_new('cnbgrmask', self.mask, nmask=8, slice=2, $
-                           /noscale, color = color, alpha=.5, blend=[3,4])
+                           /noscale, color = color, alpha=1., blend=[3,4])
   return, 1
 end
 

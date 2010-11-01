@@ -11,6 +11,29 @@ pro dg_interplot::resize_points
   endfor
 end
 
+pro dg_interplot::update_axes
+  ;- axes 7% in from the left/bottom
+  cen = self.view_cen
+  wid = self.view_wid
+  loc = cen - .39 * wid
+  xra = [cen[0]-.39*wid[0], cen[0]+.45*wid[0]]
+  yra = [cen[1]-.39*wid[1], cen[1]+.45*wid[1]]
+  self.axes[0]->setProperty, location=loc, range=xra, ticklen = .03 * wid[1], /exact
+  self.axes[1]->setProperty, location=loc, range=yra, ticklen = .03 * wid[0], /exact
+  self.axes[0]->getProperty, ticktext=t1
+  self.axes[1]->getProperty, ticktext=t2
+  t1->setProperty, char_dim=.02*wid
+  t2->setProperty, char_dim=.02*wid
+
+  self.axtitle[0]->setProperty, char_dim = .02 * wid 
+  self.axtitle[1]->setProperty, char_dim = .02 * wid[[1,0]]
+  
+  self.basePlot->setProperty, xrange=xra, yrange=yra
+  for i = 0, n_elements(self.subplots)-1 do $
+     self.subplots[i]->setProperty, xra = xra, yra = yra
+   
+end
+
 pro dg_interplot::set_substruct, id, substruct
   self->dg_client::set_substruct, id, substruct, status
   if ~status then return
@@ -21,7 +44,7 @@ function dg_interplot::event, event
   widget_control, event.id, get_uvalue = uval
   self->resize_points
   super = self->interwin::event(event)
-
+  self->update_axes
   if size(uval, /tname) eq 'STRING' && uval eq 'list' $
   then self->update_plots, /snap
   
@@ -29,10 +52,10 @@ function dg_interplot::event, event
 end
 
 pro dg_interplot::update_plots, snap = snap
-  x = widget_info(self.varlists[0], /droplist_select)
-  y = widget_info(self.varlists[1], /droplist_select)
-  x = (*self.data).(x)
-  y = (*self.data).(y)
+  xid = widget_info(self.varlists[0], /droplist_select)
+  yid = widget_info(self.varlists[1], /droplist_select)
+  x = (*self.data).(xid)
+  y = (*self.data).(yid)
   self.baseplot->setProperty, datax = x, datay = y
   ptr = self.ptr
   for i = 0, 7, 1 do begin
@@ -58,19 +81,33 @@ pro dg_interplot::update_plots, snap = snap
                                    color = self.colors[*,i], $
                                    symbol = obj_new('idlgrsymbol', 4, thick=3), $
                                    linestyle = 6)
-        self->add_graphics_atom, self.subplots[i], position = 0
+        self->add_graphics_atom, self.subplots[i], position = 2
      endelse
   endfor
 
-  ;- resize viewplane
+  ;- resize viewplane if changing plot variables
   if keyword_set(snap) then begin
-     object_bounds, self.model, xra, yra, zra
+     xra = minmax(x,/nan) & yra = minmax(y,/nan)
+     print, xra, yra
+     xbad = range(xra) eq 0 || min(~finite(xra))
+     ybad = range(yra) eq 0 || min(~finite(yra))
+     
+     if xbad then xra=[0,1]
+     if ybad then yra=[0,1]
+
+     xra += .15 * range(xra) * [-1,1]
+     yra += .15 * range(yra) * [-1,1]
      self.view_cen = [mean(xra), mean(yra)]
      self.view_wid = [range(xra), range(yra)] * 1.05
+     tags = tag_names(*self.data)
+     print, tags[[xid, yid]]
+     self.axtitle[0]->setProperty, strings=tags[xid]
+     self.axtitle[1]->setProperty, strings=tags[yid]
      self->update_viewplane
      self->resize_points
+     self->update_axes
   endif
-
+  
   self->request_redraw
 end
      
@@ -100,6 +137,7 @@ function dg_interplot::init, ptr, $
                           _extra = extra
 
   junk = self->dg_client::init(ptr, listener, color = color)
+  tags = tag_names(data)
 
   symbol = obj_new('idlgrsymbol', 4, thick=3)
   plot = obj_new('idlgrplot', $
@@ -107,14 +145,16 @@ function dg_interplot::init, ptr, $
                  data.(1), symbol = symbol, linestyl=6)
   self.data = ptr_new(data)
 
-  xaxis = obj_new('idlgraxis', 0, range=minmax(data.(0)))
-  yaxis = obj_new('idlgraxis', 1, range=minmax(data.(1)))
+  self.axtitle=[obj_new('idlgrtext', tags[0]), $
+                obj_new('idlgrtext', tags[1])]
+  xaxis = obj_new('idlgraxis', 0, range=minmax(data.(0)), title=self.axtitle[0])
+  yaxis = obj_new('idlgraxis', 1, range=minmax(data.(1)), title=self.axtitle[1])
   self.axes=[xaxis, yaxis]
 
   model = obj_new('idlgrmodel')
-  model->add, plot
   model->add, xaxis
   model->add, yaxis
+  model->add, plot
   
   self.baseplot = plot
   junk = self->interwin::init(model, _extra = extra)
@@ -124,7 +164,6 @@ function dg_interplot::init, ptr, $
   self.base2 = base2
   r1 = widget_base(base2, /row)
   r2 = widget_base(base2, /row)
-  tags = tag_names(data)
   lab1 = widget_label(r1, value='Variable 1')
   list1 = widget_droplist(r1, value = tags, uval='list')
   lab2 = widget_label(r2, value='Variable 2')
@@ -144,6 +183,7 @@ pro dg_interplot__define
           baseplot:obj_new(), $
           subplots:objarr(8), $
           axes:objarr(2), $
+          axtitle:objarr(2), $
           data:ptr_new()}
 
 end
