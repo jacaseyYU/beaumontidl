@@ -126,6 +126,15 @@ pro interwin::request_redraw, debug = debug
   endif
 end
 
+pro interwin::set_rotation_center, center
+  self.model->getProperty, transform = t
+  ;- where does rotation center currently project?
+  off = [[center[0]],[center[1]],[center[2]],[1]] # t
+  ;- this point should move to origin
+  self.rot_cen = off[0:2]
+  self->request_redraw
+end
+
 function interwin::event, event
   ;- widget timer events tell us when to update display
   if tag_names(event, /structure_name) eq 'WIDGET_TIMER' then begin
@@ -177,9 +186,9 @@ function interwin::event, event
                              xyz)
         haveTransform = self.trackball->update(event, transform=qmat)
         info = {win:win, g:g, outside:outside, xyz:xyz, haveTransform:haveTransform, $
-                qmat:haveTransform ? qmat : 0}
+                qmat:haveTransform ? qmat : 0, hit:junk}
         case event.type of
-           0: self->button_press_event, event
+           0: self->button_press_event, event, info
            1: self->button_release_event, event
            2: self->button_motion_event, event, info
            5: self->keyboard_event, event
@@ -206,9 +215,7 @@ function interwin::event, event
             RIGHT_RELEASE: event.type eq 1 && event.release eq 4, $
             press:event.press, type:event.type, release:event.release, $
             modifiers:event.modifiers, ch:event.ch, key:event.key}
-
-  self->check_listen, result
-  return, (self.listen || event.type eq 5 || event.type eq 6) ? result : 7
+  return, result
 end
 
 pro interwin::menu_event, event
@@ -246,7 +253,10 @@ pro interwin::button_press_event, event, info
                                     [event.y, event.y], $
                                     color=[255,0,0])
         self.rescale_model->add, self.rescale_plot
+                                ;- ctrl + left click sets new rotation center
      endif
+     if info.hit && (event.modifiers and 2) ne 0 then $
+           self->set_rotation_center, info.xyz
   endif
   if event.press eq 4 then self.r_drag = 1
   if self.l_drag && self.doRotate then self->toggleWireframe
@@ -290,8 +300,11 @@ pro interwin::button_motion_event, event, info
   ;-rotating, translate, or rescale?
   if self.doRotate then begin
      if info.haveTransform ne 0 then begin
+        cen = self.rot_cen
+        self.model->translate, -self.rot_cen[0], -self.rot_cen[1], -self.rot_cen[2]
         self.model->getProperty, transform=t
         self.model->setProperty, transform=t#info.qmat
+        self.model->translate, self.rot_cen[0], self.rot_cen[1], self.rot_cen[2]
         self.updatePolys = 1
      endif
   endif else if self.doTranslate then begin
@@ -404,7 +417,6 @@ pro interwin::toggleWireframe
 end
 
 pro interwin::updatePolys
-  print, 'updating polygons'
   polys = self->getPolygonObjects(ct)
   self.model->getProperty, transform = t
   for i = 0, ct - 1, 1 do begin
@@ -671,6 +683,7 @@ function interwin::init, model, $
   widget_control, child, set_uvalue = self, $
                   kill_notify='interwin_kill'
   
+
   return, 1
 end
 
@@ -730,9 +743,10 @@ pro interwin__define
           modifiers:0B, $       ;- a keyboard modifier filter used to ignore events
           view_cen:[0.,0.], $   ;- center of viewport, in data coords
           view_wid:[0.,0.], $   ;- width of viewport, in data coords
+          rot_cen:dblarr(3), $  ;- pivot point when rotating
+
           anchor:[0., 0.], $    ;- cursor pos at start of drag
           last_render:0D $      ;- systime of last render
-          
          }
 end
           

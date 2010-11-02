@@ -1,20 +1,24 @@
-pro dg_client::set_substruct, id, substruct, status
-  status = 0
-  if self.substructs[id] eq substruct then return
-  self.substructs[id] = substruct
-  status = 1
+pro dg_client::set_current, id
+  self.current = id
 end
 
-function dg_client::get_substruct, id, all = all
-  if keyword_set(all) then return, self.substructs
+pro dg_client::set_substruct, id, substruct, status
+  message, 'cannot call directly'
+end
+
+function dg_client::get_substruct, id
   if n_elements(id) ne 1 then $
-     message, 'must profide an index or set /all'
-  return, self.substructs[id]
+     message, 'must profide an index'
+  return, *self.substructs[id]
+end
+
+pro dg_client::cleanup
+  ptr_free, self.substructs
 end
 
 function dg_client::init, ptr, listener, colors = colors
   self.ptr = ptr
-  self.substructs = replicate(-2, 8)
+  for i = 0, 7 do self.substructs[i] = ptr_new(-10)
 
   if ~keyword_set(colors) then $
      colors = transpose(fsc_color(['crimson', 'royalblue', 'orange', 'purple', $
@@ -29,8 +33,11 @@ end
 pro dg_client__define
   data = {dg_client, $
           ptr:ptr_new(), $
+          ;- mask properties
           colors:bytarr(3, 8), $
           alpha:fltarr(8), $
-          substructs:intarr(8), $
-          listener:0}
+          substructs:ptrarr(8), $
+          current:0, $ ;- current mask
+          listener:0 $
+         }
 end
