@@ -47,8 +47,27 @@ function dg_interplot::event, event
   self->update_axes
   if size(uval, /tname) eq 'STRING' && uval eq 'list' $
   then self->update_plots, /snap
-  
+  if size(super, /tname) eq 'STRUCT' && $
+  super.LEFT_CLICK eq 0 then help, super, /struct
   return, 1
+end
+
+function dg__interplot::update_roi, event
+  self.roi->appendData, event.x, even.ty
+  ;- draw roi to image
+  self.roi->getProperty, data = vert
+  self.roiplot->setProperty, data = vert
+  ;- which points are inside?
+  self.baseplot->getProperty, data = pts
+  inside = self.roi->containsPoints(pts)
+  return, where(inside)
+end
+
+pro dg_interplot::clear_roi
+  self.roi->getProperty, data = d
+  nvert = n_elements(d)/2
+  self.roi->removeData, count = nvert
+  self.roiplot->setProperty, data=[[!values.f_nan], [!values.f_nan]]
 end
 
 pro dg_interplot::update_plots, snap = snap
@@ -171,6 +190,10 @@ function dg_interplot::init, ptr, $
   widget_control, list2, set_droplist_select = 1
 
   self.varlists = [list1, list2]
+  nan = !values.f_nan
+  self.roiplot = obj_new('idlgrplot', [nan,nan],[nan,nan])
+  self.model->add, roiplot
+  self.roi = obj_new('idlanroi')
   return, 1
 end
 
@@ -182,6 +205,8 @@ pro dg_interplot__define
           varlists:[0L, 0L], $
           baseplot:obj_new(), $
           subplots:objarr(8), $
+          roiplot:obj_new(), $
+          roi:obj_new(), $
           axes:objarr(2), $
           axtitle:objarr(2), $
           data:ptr_new()}

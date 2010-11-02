@@ -118,6 +118,11 @@ pro dendrogui_set_id, id, sptr
   widget_control, (*sptr).selects[(*sptr).index], set_value = (*sptr).uncheck_bmp
   widget_control, (*sptr).selects[id], set_value = (*sptr).check_bmp
   (*sptr).index = id
+  if obj_valid((*sptr).dp) then (*sptr).dp->set_current, id
+  if obj_valid((*sptr).dd) then (*sptr).dd->set_current, id
+  if obj_valid((*sptr).di) then (*sptr).di->set_current, id
+  if obj_valid((*sptr).ds) then (*sptr).ds->set_current, id
+
 end
 
 pro dendrogui_sync_clients, sptr, iso = iso
@@ -148,6 +153,7 @@ end
 
 pro dendrogui, ptr, data = data
 
+;  restore, '~/dendro/ex_ptr_small.sav'
   if n_elements(ptr) eq 0 then begin
      print, 'Calling sequence'
      print, ' dendrogui, ptr, [data = data]'
