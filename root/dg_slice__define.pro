@@ -1,21 +1,23 @@
 pro dg_slice::set_substruct, index, substruct
   ptr = self.ptr
 
-  venn = dendrovenn(self.substructs[index], substruct, (*ptr).clusters)
+  old = self->get_substruct(index)
+  if array_equal(substruct, old) then return
+  *self.substructs[index] = substruct
 
-  self->dg_client::set_substruct, index, substruct, status
-  if ~status then return
-
+  venn = venn(old, substruct)
   
   for i = 0, venn.anotbct -1, 1 do begin
      ind = venn.anotb[i]
+     if ind lt 0 then continue
      self->delta_mask, index, ind, /subtract
   endfor
   for i = 0, venn.bnotact - 1, 1 do begin
      ind = venn.bnota[i]
+     if ind lt 0 then continue
      self->delta_mask, index, ind, /add
   endfor
-  self.substructs[index] = substruct
+
   self->update_images
   self->request_redraw
 end
@@ -41,19 +43,25 @@ function dg_slice::event, event
 
   if size(super, /tname) ne 'STRUCT' then return, 0
   ptr = self.ptr
-  ;- find the substructure
-  ind = where((*ptr).x eq floor(super.x) and $
-              (*ptr).y eq floor(super.y) and $
-              (*ptr).v eq floor(super.z), ct)
-  id = ct eq 0 ? -2 : (*ptr).cluster_label[ind[0]]
-
-  result = create_struct(super, 'substruct', id, $
-                       name='DG_SLICE_EVENT')
+  result = create_struct(super, 'substruct', 0, $
+                         'self', self, $
+                         name='DG_SLICE_EVENT')
   if self.listener ne 0 then $
      widget_control, self.listener, send_event = result
   return, result
 end
 
+function dg_slice::calc_substruct, event
+  ptr = self.ptr
+  print, 'calc'
+  x = floor(event.x) & y = floor(event.y) & z = floor(event.z)
+  ind = where((*ptr).x eq x and $
+              (*ptr).y eq y and $
+              (*ptr).v eq z, ct)
+  id = ct eq 0 ? -2 : (*ptr).cluster_label[ind[0]]
+  return, id
+end
+  
 
 pro dg_slice::cleanup
   self->slice3::cleanup
@@ -100,6 +108,6 @@ pro test
   xmanager, 'test', tlb
 
   ptr_free, ptr
-  help, /heap
+;  help, /heap
 
 end

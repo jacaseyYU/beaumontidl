@@ -1,17 +1,14 @@
 pro dg_dendroplot::set_substruct, index, substruct
-  self->dg_client::set_substruct, index, substruct, status
-  if ~status then return
+  if array_equal(substruct, *self.substructs[index]) then return
+  *self.substructs[index] = substruct
 
-  case 1 of
-     substruct eq -1 : xy = leafplot_xy(self.ptr)
-     substruct ge 0: xy = dplot_xy(self.ptr, substruct)
-     else: xy=replicate(!values.f_nan, 2, 2)
-  endcase
+  xy = (substruct[0] lt 0) ? replicate(!values.f_nan, 2, 2) : $
+       dplot_multi_xy(substruct, self.ptr)
 
   if ~obj_valid(self.plots[index]) then begin
      plot = obj_new('idlgrplot', xy[0,*], xy[1,*], $
                     color =  self.colors[*,index], $
-                    thick = 2)
+                    thick = 3)
      self.plots[index] = plot
      self->interwin::add_graphics_atom, plot, position = 0
   endif else begin
@@ -20,50 +17,49 @@ pro dg_dendroplot::set_substruct, index, substruct
   endelse
   self.redraw = 1
 end
-  
+
 function dg_dendroplot::event, event
-
+  
   ;- handle basic interwin events
-  res = self->interwin::event(event)
+  super = self->interwin::event(event)
 
+  ;- super is a struct if interwin generated a draw event
+  relay = size(super, /tname) eq 'STRUCT'
+  if ~relay then return, 0
 
-  ;- determine which substruct we're pointing at
-  relay = size(res, /tname) eq 'STRUCT'
+  ;- catch 'N' press, normalize denroplots
+  if event.type eq 5 && strupcase(event.ch) eq 'N' then $
+     self->toggle_normplots
+
+  ;- find the structure we're looking at, and 
+  ;- send information to client
+  x = super.x & y = super.y
+  substruct = pick_branch(x, y, (*self.ptr).xlocation, $
+                          (*self.ptr).height, (*self.ptr).clusters)
+  info = create_struct(super, 'substruct', substruct, $
+                       name = 'dg_dendroplot_event')
+  if self.listener gt 0 then $
+     widget_control, self.listener, send_event = info
   
-  draw_event = relay && res.type eq 2
-  
-  substruct = -3
-  if draw_event then begin
-     x = res.x & y = res.y
-     substruct = pick_branch(x, y, (*self.ptr).xlocation, $
-                             (*self.ptr).height, (*self.ptr).clusters)
-  endif 
-  if relay then begin
-     result = create_struct(res, 'substruct', substruct, $
-                            name='dg_dendroplot_event')
-  endif else begin
-     result = 1
-  endelse
-
-  if relay && self.listener gt 0 then begin
-     widget_control, self.listener, send_event = result
-  endif
-
-  return, result
-
+  return, 0
+     
 end
+  
+pro dg_dendroplot::toggle_normplots
+  
 
 function dg_dendroplot::init, ptr, color = color, $
                               listener = listener, $
                               _extra = extra
-
+  
   junk = self->dg_client::init(ptr, listener, color = color)
   dendro = dplot_obj(ptr, max((*ptr).clusters+1))
-
+  self.baseplot = dendro
   yra = minmax((*ptr).height) + range((*ptr).height) * [-.05, .05]
   axis = obj_new('idlgraxis', direction = 1, range = yra)
   model = obj_new('IDLgrModel')
   model->add, dendro
+  model->add, axis
 
   return, self->interwin::init(model, _extra = extra)
 
@@ -79,13 +75,14 @@ end
 pro dg_dendroplot__define
   data = { dg_dendroplot, inherits interwin, $
            inherits dg_client, $
+           baseplot:obj_new(), $
            plots:objarr(8)}
 end
 
 
 pro test_event, event
   widget_control, event.top, get_uvalue = obj
-  obj->set_substruct, randomu(seed)*5, event.substruct
+  obj->set_substruct, randomu(seed)*5, [event.substruct, floor(randomu(seed,3)*50)]
   print, event.substruct
 end
 

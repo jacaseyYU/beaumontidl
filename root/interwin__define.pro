@@ -379,7 +379,7 @@ pro interwin::setButton, translate = translate, rotate = rotate, resize = resize
      widget_control, self.translateButton, set_value = self.bmp_translate_deselect
      widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect
      widget_control, self.resizeButton, set_value = self.bmp_resize_select
-  endif else message, 'bug!'
+  endif
 end
 
 pro interwin::set_event_filter, control = control, shift = shift
