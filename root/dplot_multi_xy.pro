@@ -1,6 +1,8 @@
-function dplot_multi_xy, ids, ptr, leaf =leaf
-  Clusters = (*ptr).clusters
-  height = (*ptr).height
+function dplot_multi_xy, ids, ptr, leaf =leaf, norm = norm
+  clusters = (*ptr).clusters
+  if keyword_set(norm) then begin
+     height = 1. * cluster_height(clusters)
+  endif else height = (*ptr).height
   xloc = (*ptr).xlocation
 
   xs = obj_new('stack')

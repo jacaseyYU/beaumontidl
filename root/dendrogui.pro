@@ -78,8 +78,7 @@ pro dendrogui_cleanup, tlb
 end
 
 pro dendrogui_keyboard_event, event, sptr
-  print, 'keyboard'
-  Case strupcase(event.ch) of
+  case strupcase(event.ch) of
      '0': dendrogui_set_id, 0, sptr
      '1': dendrogui_set_id, 1, sptr
      '2': dendrogui_set_id, 2, sptr
