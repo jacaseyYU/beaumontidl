@@ -2,8 +2,12 @@ pro dg_client::set_current, id
   self.current = id
 end
 
-pro dg_client::set_substruct, id, substruct, status
-  message, 'cannot call directly'
+pro dg_client::set_substruct
+  message, 'cannot call this method directly'
+end
+
+function dg_client::calc_substruct, event
+  return, event.substruct
 end
 
 function dg_client::get_substruct, id

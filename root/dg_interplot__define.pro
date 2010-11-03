@@ -1,3 +1,8 @@
+pro dg_interplot::set_current, id
+  self->dg_client::set_current, id
+  self->reset_roi
+end
+
 pro dg_interplot::resize_points
   wid = self.view_wid
   self.baseplot->getProperty, symbol = s
@@ -12,7 +17,6 @@ pro dg_interplot::resize_points
 end
 
 pro dg_interplot::update_axes
-  ;- axes 7% in from the left/bottom
   cen = self.view_cen
   wid = self.view_wid
   loc = cen - .39 * wid
@@ -30,44 +34,47 @@ pro dg_interplot::update_axes
   
   self.basePlot->setProperty, xrange=xra, yrange=yra
   for i = 0, n_elements(self.subplots)-1 do $
-     self.subplots[i]->setProperty, xra = xra, yra = yra
+     if obj_valid(self.subplots[i]) then $
+        self.subplots[i]->setProperty, xra = xra, yra = yra
    
 end
 
 pro dg_interplot::set_substruct, id, substruct
-  self->dg_client::set_substruct, id, substruct, status
-  if ~status then return
+  ;- is this substruct different
+  old = self->get_substruct(id)
+  if array_equal(substruct, old) then return
+  *self.substructs[id] = substruct
   self->update_plots
+
 end
 
 function dg_interplot::event, event
   widget_control, event.id, get_uvalue = uval
   self->resize_points
-  super = self->interwin::event(event)
+  super = self->roiwin::event(event)
   self->update_axes
+
+  ;- changing plot variables
   if size(uval, /tname) eq 'STRING' && uval eq 'list' $
   then self->update_plots, /snap
+
+  ;- updated roi
   if size(super, /tname) eq 'STRUCT' && $
-  super.LEFT_CLICK eq 0 then help, super, /struct
+     tag_names(super, /struct) eq 'ROI_EVENT' then begin
+     substructs = self->roi2substructs(count = ct)
+     send =  create_struct(super, 'substruct', ptr_new(substructs) ,$
+                           name='dg_interplot_event')
+     if self.listener ne 0 then widget_control, self.listener, $
+        send_event = send
+  endif
+
   return, 1
 end
 
-function dg__interplot::update_roi, event
-  self.roi->appendData, event.x, even.ty
-  ;- draw roi to image
-  self.roi->getProperty, data = vert
-  self.roiplot->setProperty, data = vert
-  ;- which points are inside?
-  self.baseplot->getProperty, data = pts
-  inside = self.roi->containsPoints(pts)
-  return, where(inside)
-end
-
-pro dg_interplot::clear_roi
-  self.roi->getProperty, data = d
-  nvert = n_elements(d)/2
-  self.roi->removeData, count = nvert
-  self.roiplot->setProperty, data=[[!values.f_nan], [!values.f_nan]]
+function dg_interplot::roi2substructs, count = count
+  self.baseplot->getProperty, data = d
+  hit = self.roi->containsPoints(d[0,*], d[1,*])
+  return, where(hit, count)
 end
 
 pro dg_interplot::update_plots, snap = snap
@@ -78,17 +85,14 @@ pro dg_interplot::update_plots, snap = snap
   self.baseplot->setProperty, datax = x, datay = y
   ptr = self.ptr
   for i = 0, 7, 1 do begin
-     id = self.substructs[i]
+     ids = *self.substructs[i]
 
      ;- what IDs belong to this substruct?
-     if id eq -2 then ids = 0
-     if id eq -1 then ids = get_leaves((*ptr).clusters)
-     if id gt -1 then ids = leafward_mergers(id, (*ptr).clusters)
-     if n_elements(ids) eq 0 then continue
+     if ids[0] lt 0 then continue
      ids = [ids]
 
      dx = x[ids] & dy = y[ids]
-     if id eq -2 then begin
+     if min(ids) lt 0 then begin
         dx = [!values.f_nan]
         dy = [!values.f_nan]
      endif
@@ -169,14 +173,13 @@ function dg_interplot::init, ptr, $
   xaxis = obj_new('idlgraxis', 0, range=minmax(data.(0)), title=self.axtitle[0])
   yaxis = obj_new('idlgraxis', 1, range=minmax(data.(1)), title=self.axtitle[1])
   self.axes=[xaxis, yaxis]
-
   model = obj_new('idlgrmodel')
   model->add, xaxis
   model->add, yaxis
   model->add, plot
   
   self.baseplot = plot
-  junk = self->interwin::init(model, _extra = extra)
+  junk = self->roiwin::init(model, _extra = extra)
   
   ;- extra widgets for selecting plot variables
   base2 = widget_base(self.base, col = 1)
@@ -191,22 +194,17 @@ function dg_interplot::init, ptr, $
 
   self.varlists = [list1, list2]
   nan = !values.f_nan
-  self.roiplot = obj_new('idlgrplot', [nan,nan],[nan,nan])
-  self.model->add, roiplot
-  self.roi = obj_new('idlanroi')
   return, 1
 end
 
 pro dg_interplot__define
   data = {dg_interplot, $
-          inherits interwin, $
+          inherits roiwin, $
           inherits dg_client, $
           base2:0L, $
           varlists:[0L, 0L], $
           baseplot:obj_new(), $
           subplots:objarr(8), $
-          roiplot:obj_new(), $
-          roi:obj_new(), $
           axes:objarr(2), $
           axtitle:objarr(2), $
           data:ptr_new()}

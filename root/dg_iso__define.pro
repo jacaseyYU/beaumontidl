@@ -4,8 +4,9 @@ pro dg_iso::set_current, id
 end
 
 pro dg_iso::set_substruct, index, substruct
-  self->dg_client::set_substruct, index, substruct, status
-  if ~status then return
+  old = *self.substructs[index]
+  if array_equal(substruct, old) then return
+  *self.substructs[index] = substruct
 
   ;- get substruct isosurface
   iso = self->make_polygon(substruct, color = self.colors[*, index], $
@@ -29,7 +30,7 @@ pro dg_iso::center_on_substruct, index
 end
 
 function dg_iso::make_polygon, id, _extra = extra
-  if id lt -1 then return, obj_new()
+  if min(id) lt 0 then return, obj_new()
 
   ind = substruct(id, self.ptr)
   if n_elements(ind) lt 5 then return, obj_new()
@@ -75,6 +76,10 @@ end
 function dg_iso::event, event
   super = self->interwin::event(event)
   self->update_axes
+  if size(super, /tname) eq 'STRUCT' && self.listener ne 0 then $
+     widget_control, self.listener, $
+                     send_event = create_struct(super, name='DG_ISO_EVENT')
+  
   return, 1
 end
 
@@ -142,14 +147,13 @@ end
 
 
 pro test_event, event
-  widget_control, event.top, get_uvalue = obj
 end
 pro test
   restore, '~/dendro/ex_ptr_small.sav'
   tlb = widget_base()
   widget_control, tlb, /realize
   di = obj_new('dg_iso', ptr, listen = tlb)
-  di->set_substruct, 0, 160
+  di->set_substruct, 0, [18, 35, 30, 160]
   di->run
   xmanager, 'test', tlb, /no_block
 end
