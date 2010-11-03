@@ -55,7 +55,8 @@ function dg_interplot::event, event
   self->update_axes
 
   ;- changing plot variables
-  if size(uval, /tname) eq 'STRING' && uval eq 'list' $
+  isStr = size(uval, /tname) eq 'STRING'
+  if isStr && uval eq 'list' $
   then self->update_plots, /snap
 
   ;- updated roi
@@ -68,7 +69,19 @@ function dg_interplot::event, event
         send_event = send
   endif
 
+  ;- log buttons
+  if isStr && uval eq 'log1' then self->toggle_log, /xlog
+  if isStr && uval eq 'log2' then self->toggle_log, /ylog
+     
   return, 1
+end
+
+pro dg_interplot::toggle_log, xlog = xlog, ylog = ylog
+  if keyword_set(xlog) then self.xlog = ~self.xlog
+  if keyword_set(ylog) then self.ylog = ~self.ylog
+  self.axes[0]->setProperty, log = self.xlog
+  self.axes[1]->setProperty, log = self.ylog
+  self->update_plots
 end
 
 function dg_interplot::roi2substructs, count = count
@@ -81,7 +94,9 @@ pro dg_interplot::update_plots, snap = snap
   xid = widget_info(self.varlists[0], /droplist_select)
   yid = widget_info(self.varlists[1], /droplist_select)
   x = (*self.data).(xid)
+  if self.xlog then x = alog10(x)
   y = (*self.data).(yid)
+  if self.ylog then x = alog10(x)
   self.baseplot->setProperty, datax = x, datay = y
   ptr = self.ptr
   for i = 0, 7, 1 do begin
@@ -110,6 +125,7 @@ pro dg_interplot::update_plots, snap = snap
 
   ;- resize viewplane if changing plot variables
   if keyword_set(snap) then begin
+     self->reset_roi
      xra = minmax(x,/nan) & yra = minmax(y,/nan)
      print, xra, yra
      xbad = range(xra) eq 0 || min(~finite(xra))
@@ -188,8 +204,10 @@ function dg_interplot::init, ptr, $
   r2 = widget_base(base2, /row)
   lab1 = widget_label(r1, value='Variable 1')
   list1 = widget_droplist(r1, value = tags, uval='list')
+;  log1 = widget_button(r1, value='Toggle Log', uval='log1')
   lab2 = widget_label(r2, value='Variable 2')
   list2 = widget_droplist(r2, value = tags, uval='list')
+;  log1 = widget_button(r2, value='Toggle Log', uval='log2')
   widget_control, list2, set_droplist_select = 1
 
   self.varlists = [list1, list2]
@@ -207,6 +225,8 @@ pro dg_interplot__define
           subplots:objarr(8), $
           axes:objarr(2), $
           axtitle:objarr(2), $
-          data:ptr_new()}
+          data:ptr_new(), $
+          xlog:0B, $
+          ylog:0B }
 
 end

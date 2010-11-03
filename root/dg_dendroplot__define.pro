@@ -1,9 +1,9 @@
-pro dg_dendroplot::set_substruct, index, substruct
-  if array_equal(substruct, *self.substructs[index]) then return
-  *self.substructs[index] = substruct
+pro dg_dendroplot::set_substruct, index, substruct, force = force
 
+  if ~keyword_set(force) && array_equal(substruct, *self.substructs[index]) then return
+  *self.substructs[index] = substruct
   xy = (substruct[0] lt 0) ? replicate(!values.f_nan, 2, 2) : $
-       dplot_multi_xy(substruct, self.ptr)
+       dplot_multi_xy(substruct, self.ptr, norm = self.norm)
 
   if ~obj_valid(self.plots[index]) then begin
      plot = obj_new('idlgrplot', xy[0,*], xy[1,*], $
@@ -28,7 +28,7 @@ function dg_dendroplot::event, event
   if ~relay then return, 0
 
   ;- catch 'N' press, normalize denroplots
-  if event.type eq 5 && strupcase(event.ch) eq 'N' then $
+  if event.type eq 5 && event.release && strupcase(event.ch) eq 'N' then $
      self->toggle_normplots
 
   ;- find the structure we're looking at, and 
@@ -46,7 +46,16 @@ function dg_dendroplot::event, event
 end
   
 pro dg_dendroplot::toggle_normplots
-  
+  self.norm = ~self.norm
+  ptr = self.ptr
+  dendro = dplot_obj(ptr, max((*ptr).clusters+1), norm = self.norm)
+  self.model->remove, self.baseplot
+  obj_destroy, self.baseplot
+  self.baseplot = dendro
+  self.model->add, dendro
+
+  for i = 0, 7 do self->set_substruct, i, *self.substructs[i],  /force
+end
 
 function dg_dendroplot::init, ptr, color = color, $
                               listener = listener, $
@@ -76,7 +85,8 @@ pro dg_dendroplot__define
   data = { dg_dendroplot, inherits interwin, $
            inherits dg_client, $
            baseplot:obj_new(), $
-           plots:objarr(8)}
+           plots:objarr(8), $
+           norm:0B}
 end
 
 

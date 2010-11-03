@@ -27,9 +27,13 @@ pro recursive_plot, id, xs, ys, clusters, height, xloc
 end
 
 
-function dplot_xy, ptr, id
+function dplot_xy, ptr, id, norm = norm
+  compile_opt idl2
+
   clusters = (*ptr).clusters
-  height = (*ptr).height
+  if keyword_set(norm) then begin
+     height = 1. * cluster_height(clusters)
+  endif else height = (*ptr).height
   xloc = (*ptr).xlocation
 
   nobj = n_elements(height)
