@@ -53,7 +53,6 @@ end
 
 function dg_slice::calc_substruct, event
   ptr = self.ptr
-  print, 'calc'
   x = floor(event.x) & y = floor(event.y) & z = floor(event.z)
   ind = where((*ptr).x eq x and $
               (*ptr).y eq y and $
