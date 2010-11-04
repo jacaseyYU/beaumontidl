@@ -53,6 +53,13 @@ function dg_iso::make_polygon, id, _extra = extra
   
   ;- surface to polygon
   o = obj_new('idlgrpolygon', v, poly = c, _extra = extra)
+;  cube[x, y, z] = (*ptr).t[ind]
+;  o = obj_new('idlgrvolume', cube, _extra = extra)
+;  m = obj_new('idlgrmodel')
+;  t = [[1.,0,0,lo[0]], [0,1,0,lo[1]], [0,0,1,lo[2]],[0,0,0,1]]
+;  m->setProperty, tran=t
+;  m->add, o
+;  return, m
   return, o
 end
 
