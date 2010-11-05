@@ -18,6 +18,11 @@ pro dg_dendroplot::set_substruct, index, substruct, force = force
   self.redraw = 1
 end
 
+pro dg_dendroplot::update_info, text
+  if strmid(text, 0, 2) ne 'ID' then return
+  widget_control, self.label, set_value = text
+end
+
 function dg_dendroplot::event, event
   
   ;- handle basic interwin events
@@ -41,6 +46,7 @@ function dg_dendroplot::event, event
   if self.listener gt 0 then $
      widget_control, self.listener, send_event = info
   
+  self->update_info, string(substruct, format='("ID: ", i0)')
   return, 0
      
 end

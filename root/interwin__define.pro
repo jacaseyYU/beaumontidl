@@ -184,6 +184,11 @@ function interwin::event, event
                   event.y ge g.scr_ysize
         junk = win->pickdata(self.view, self.model, [event.x, event.y], $
                              xyz)
+        
+        string = string(xyz[0], xyz[1], $
+                        format='("x: ", e0.2, "  y: ", e0.2)')
+        if self.is3D then string += string(xyz[2], format='("  z: ",e0.2)')
+        self->update_info, string
         haveTransform = self.trackball->update(event, transform=qmat)
         info = {win:win, g:g, outside:outside, xyz:xyz, haveTransform:haveTransform, $
                 qmat:haveTransform ? qmat : 0, hit:junk}
@@ -218,22 +223,43 @@ function interwin::event, event
   return, result
 end
 
+pro interwin::update_info, string
+  widget_control, self.label, set_value = string
+end
+
 pro interwin::menu_event, event
   case event.value of
-     'File.Save as image': 
+     'File.Save as image': begin
+        widget_control, self.draw, get_value= win
+        win->getProperty, image_data = out
+        help, out
+        result = dialog_write_image(out, file='image.png', type='PNG', options = o, $
+                                    dialog_parent = self.base, /warn_exist)
+        ;- by default, TIFF files write upside-down. Fix this.
+        help, o.type
+        if o.type eq 'TIFF' then write_tiff, o.filename, reverse(out, 3) 
+     end
      'File.Save view': begin
-        file=dialog_pickfile(default_extension='vew', /write, /overwrite_prompt)
+        file=dialog_pickfile(default_extension='vew', $
+                             filter='*.vew', /write, /overwrite_prompt)
         view = self.view
         if file ne '' then save, view, file=file
         return
      end
      'File.Save model': begin
-        file=dialog_pickfile(default_extension='mod', /write, /overwrite_prompt)
+        file=dialog_pickfile(default_extension='mod', $
+                             filter='*.mod', /write, /overwrite_prompt)
         model = self.model
         if file ne '' then save, model, file=file
         return
      end
-     'View.Reset': 
+     'View.Reset': begin
+        self.model->setProperty, tran=[[1.,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+        self.view_cen = self.view_cen_0
+        self.view_wid = self.view_wid_0
+        self->update_viewplane
+        self->request_redraw
+     end
      'View.3D rotation.reset': begin
         self.model->setProperty, tran=[[1.,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
         self->request_redraw
@@ -645,6 +671,9 @@ function interwin::init, model, $
   rot = widget_button(base2, value=rot_im, uvalue='ROTATE', sensitive=keyword_set(rotate), accelerator='Ctrl+r')
   self.rotateButton = rot
 
+  ;- textual info label
+  label = widget_label(base2, value = ' ', /dynamic_resize)
+
   ;-draw window
   ratio = 1. * wid[1] / wid[0]
   if ratio gt 1 then begin
@@ -673,13 +702,17 @@ function interwin::init, model, $
   self.buttonbase = base2
   self.drawbase = base3
   self.view_cen = cen
+  self.view_cen_0 = cen
   self.view_wid = wid
+  self.view_wid_0 = wid
   self.last_render=0.
   self.listen = 1
   self.standalone = keyword_set(standalone)
   self.isImage = keyword_set(image)
   self.is3D = keyword_set(rotate)
   self.redraw = 1
+  self.label = label
+
   if self.isImage then self.image = image
 
   child = widget_info(base, /child)
@@ -714,6 +747,7 @@ pro interwin__define
           rotateButton:0L, $
           resizeButton:0L, $
           draw:0L, $            ;- draw widget id. value -> draw object
+          label:0L, $
 
           ;- button bitmaps
           bmp_translate_deselect:bytarr(20,20,3), $
@@ -745,7 +779,9 @@ pro interwin__define
           ;- other state info
           modifiers:0B, $       ;- a keyboard modifier filter used to ignore events
           view_cen:[0.,0.], $   ;- center of viewport, in data coords
+          view_cen_0:[0.,0.], $ ;- initial center
           view_wid:[0.,0.], $   ;- width of viewport, in data coords
+          view_wid_0:[0.,0.], $ ;- initial width
           rot_cen:dblarr(3), $  ;- pivot point when rotating
 
           anchor:[0., 0.], $    ;- cursor pos at start of drag

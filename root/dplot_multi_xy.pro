@@ -10,7 +10,8 @@ function dplot_multi_xy, ids, ptr, leaf =leaf, norm = norm
   for i = 0, n_elements(ids) - 1, 1 do begin
      id = ids[i]
      partner = merger_partner(id, clusters, merge=m)
-     assert, partner ne -1
+     hasPartner = (partner ne -1)
+     if ~hasPartner then continue
      hi = height[id]
      lo = height[m]
      if ~keyword_set(leaf) then begin

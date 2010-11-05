@@ -53,7 +53,7 @@ function dg_iso::make_polygon, id, _extra = extra
   if size(v, /n_dim) ne 2 then return, obj_new()
 ;  v = mesh_smooth(v, c)
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
-  o = obj_new('idlgrpolygon', v, poly = c, _extra = extra);, color=[255,0,0],alpha=.1);_extra = extra, alpha=.1)
+  o = obj_new('idlgrpolygon', v, poly = c, _extra = extra)
   return, o
   
   ;- surface to polygon
