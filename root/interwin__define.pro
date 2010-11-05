@@ -236,6 +236,7 @@ pro interwin::menu_event, event
      'View.Reset': 
      'View.3D rotation.reset': begin
         self.model->setProperty, tran=[[1.,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+        self->request_redraw
      end
      'View.3D rotation.Fix x axis':self->new_trackball, axis=0
      'View.3D rotation.Fix y axis':self->new_trackball, axis=1
@@ -550,6 +551,7 @@ function interwin::init, model, $
                          xoffset = xoffset, yoffset = yoffset, $
                          rotate = rotate, $
                          group_leader = group_leader, $
+                         bgcolor = bgcolor, $
                          _extra = extra
 
   if n_params() eq 0 || ~obj_valid(model) || ~obj_isa(model, 'IDLGRMODEL') then begin
@@ -569,12 +571,13 @@ function interwin::init, model, $
   if ~keyword_set(zrange) then zrange= [max([xra, yra, zra], min=lo), lo]
   zrange = [max(zrange, min=lo), lo]
   zrange += .3 * range(zrange) * [1,-1]
+  if ~keyword_set(bgcolor) then bgcolor=[255, 255, 255]
 
   cen = [rect[0] + rect[2]/2., rect[1] + rect[3]/2.]
   wid = [rect[2], rect[3]]
   print, 'cen', cen
   print, 'wid', wid
-  view = obj_new('idlgrview', viewplane_rect=rect, _extra = extra)
+  view = obj_new('idlgrview', viewplane_rect=rect, _extra = extra, color = bgcolor)
 
   self.rescale_model = obj_new('idlgrmodel')
   self.rescale_plot = obj_new('idlgrplot')

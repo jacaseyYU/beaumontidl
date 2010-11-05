@@ -43,24 +43,42 @@ function dg_iso::make_polygon, id, _extra = extra
   hi = [mx, my, mz]
   range = hi - lo
   x -= lo[0] & y -= lo[1] & z -= lo[2]
+  if min(range) le 1 then return, obj_new()
   cube = fltarr(range[0], range[1], range[2])
   cube[x, y, z] = 1
   
   ;-cube to surface
+  if size(cube, /n_dim) ne 3 then return, obj_new()
   isosurface, cube, 1, v, c
-  v = mesh_smooth(v, c)
+  if size(v, /n_dim) ne 2 then return, obj_new()
+;  v = mesh_smooth(v, c)
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
+  o = obj_new('idlgrpolygon', v, poly = c, _extra = extra);, color=[255,0,0],alpha=.1);_extra = extra, alpha=.1)
+  return, o
   
   ;- surface to polygon
-  o = obj_new('idlgrpolygon', v, poly = c, _extra = extra)
-;  cube[x, y, z] = (*ptr).t[ind]
-;  o = obj_new('idlgrvolume', cube, _extra = extra)
-;  m = obj_new('idlgrmodel')
-;  t = [[1.,0,0,lo[0]], [0,1,0,lo[1]], [0,0,1,lo[2]],[0,0,0,1]]
-;  m->setProperty, tran=t
-;  m->add, o
-;  return, m
-  return, o
+  cube[x, y, z] = (*ptr).t[ind]
+  lo2 = min(cube) & hi2 = max(cube)
+  print, lo, hi
+  rgb = bytarr(256, 3)
+  rgb[*,0] = extra.color[0]
+  rgb[*,1] = extra.color[1]
+  rgb[*,2] = extra.color[2]
+
+  struct = max(id)
+  val = (*ptr).height[struct]
+  val = (val - lo2) / (hi2 - lo2) * 255
+  print, val
+  alpha = byte(50 * exp(-(indgen(256) - val)^2 / 75))
+  plot, alpha
+  o = obj_new('idlgrvolume', bytscl(cube), $
+              rgb_table0 = rgb, opacity_table0=alpha, $
+              /interpolate, hint=3, /light)
+  m = obj_new('idlgrmodel')
+  t = [[1.,0,0,lo[0]], [0,1,0,lo[1]], [0,0,1,lo[2]],[0,0,0,1]]
+  m->setProperty, tran=t
+  m->add, o
+  return, m
 end
 
 pro dg_iso::update_axes
@@ -137,6 +155,7 @@ function dg_iso::init, ptr, color = color, listener = listener, $
   model->add, l2
   model->add, l3
   result = self->interwin::init(model, $
+                                bgcolor=byte([20, 20, 20]), $
                                 xra = xra, yra = yra, zra = zra, $
                                 _extra = extra, /rotate, eye = 1.5 * max(zra), /depth_test_disable)
   self->set_rotation_center, sz[1:3]/2.
