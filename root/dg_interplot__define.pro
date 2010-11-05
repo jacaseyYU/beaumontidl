@@ -3,6 +3,11 @@ pro dg_interplot::set_current, id
   self->reset_roi
 end
 
+pro dg_interplot::run
+  self->roiwin::run
+  self->update_plots, /snap
+end
+
 pro dg_interplot::resize_points
   wid = self.view_wid
   self.baseplot->getProperty, symbol = s
@@ -186,8 +191,11 @@ function dg_interplot::init, ptr, $
 
   self.axtitle=[obj_new('idlgrtext', tags[0]), $
                 obj_new('idlgrtext', tags[1])]
-  xaxis = obj_new('idlgraxis', 0, range=minmax(data.(0)), title=self.axtitle[0])
-  yaxis = obj_new('idlgraxis', 1, range=minmax(data.(1)), title=self.axtitle[1])
+  xra = minmax(data.(0),/nan)
+  yra = minmax(data.(1), /nan)
+
+  xaxis = obj_new('idlgraxis', 0, title=self.axtitle[0])
+  yaxis = obj_new('idlgraxis', 1, title=self.axtitle[1])
   self.axes=[xaxis, yaxis]
   model = obj_new('idlgrmodel')
   model->add, xaxis

@@ -199,6 +199,14 @@ pro dendrogui_maskselect_event, event, sptr
 end
   
 pro dendrogui_color_event, event, sptr
+  ;- pick a new color
+  new = cnb_pickcolor(/brewer, cancel = cancel)
+  if cancel then return
+  
+  ;- update the proper mask
+  for i = 0, 7 do if event.id eq (*sptr).colors[i] then break
+  assert, i lt 8
+  help, color
 end
 
 
