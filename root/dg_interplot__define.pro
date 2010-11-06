@@ -44,10 +44,10 @@ pro dg_interplot::update_axes
    
 end
 
-pro dg_interplot::set_substruct, id, substruct
+pro dg_interplot::set_substruct, id, substruct, force = force
   ;- is this substruct different
   old = self->get_substruct(id)
-  if array_equal(substruct, old) then return
+  if ~keyword_set(force) && array_equal(substruct, old) then return
   *self.substructs[id] = substruct
   self->update_plots
 
@@ -67,6 +67,7 @@ function dg_interplot::event, event
   ;- updated roi
   if size(super, /tname) eq 'STRUCT' && $
      tag_names(super, /struct) eq 'ROI_EVENT' then begin
+     self.protected = 1B
      substructs = self->roi2substructs(count = ct)
      send =  create_struct(super, 'substruct', ptr_new(substructs) ,$
                            name='dg_interplot_event')
@@ -96,6 +97,7 @@ function dg_interplot::roi2substructs, count = count
 end
 
 pro dg_interplot::update_plots, snap = snap
+  if ~self.protected then self->reset_roi else self.protected = 0
   xid = widget_info(self.varlists[0], /droplist_select)
   yid = widget_info(self.varlists[1], /droplist_select)
   x = (*self.data).(xid)
@@ -175,12 +177,13 @@ pro dg_interplot::resize, x, y
 end
 
 function dg_interplot::init, ptr, $
-                          data, $
-                          color = color, $
-                          listener = listener, $
-                          _extra = extra
+                             data, $
+                             color = color, $
+                             alpha = alpha, $
+                             listener = listener, $
+                             _extra = extra
 
-  junk = self->dg_client::init(ptr, listener, color = color)
+  junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
   tags = tag_names(data)
 
   symbol = obj_new('idlgrsymbol', 4, thick=3)
@@ -223,6 +226,20 @@ function dg_interplot::init, ptr, $
   return, 1
 end
 
+pro dg_interplot::cleanup
+  self.baseplot->getProperty, symbol = s
+  obj_destroy, s
+  for i = 0, n_elements(self.subplots) -1, 1 do begin
+     if ~obj_valid(self.subplots[i]) then continue
+     self.subplots[i]->getProperty, symbol = s
+     obj_destroy, s
+  endfor
+  obj_destroy, [self.baseplot, self.subplots, self.axes, self.axtitle]
+  ptr_free, self.data
+  self->roiwin::cleanup
+  self->dg_client::cleanup
+end
+
 pro dg_interplot__define
   data = {dg_interplot, $
           inherits roiwin, $
@@ -235,6 +252,7 @@ pro dg_interplot__define
           axtitle:objarr(2), $
           data:ptr_new(), $
           xlog:0B, $
-          ylog:0B }
+          ylog:0B, $
+          protected:0B}
 
 end

@@ -3,9 +3,46 @@ pro dg_iso::set_current, id
 ;  self->center_on_substruct, id
 end
 
-pro dg_iso::set_substruct, index, substruct
+pro dg_iso::redraw
+  if ~(self.is_merged) then self->merge_isos
+  self->interwin::redraw
+end
+
+pro dg_iso::merge_isos
+  self.is_merged = 1
+  offset = 0L
+  for i = 0, 7 do begin
+     o = self.sub_isos[i]
+     if ~obj_valid(o) then continue
+     o->getProperty, color = col, alpha = a, data = v, poly = c
+     if n_elements(verts) eq 0 then verts = v else $
+        verts = [[verts], [v]]
+     nv = n_elements(v[0,*])
+     ind = lindgen(n_elements(c)/4)*4
+     c[ind+1] += offset
+     c[ind+2] += offset
+     c[ind+3] += offset
+     offset += nv
+     conn = append(conn, c)
+     new = byte(rebin([col, 255*a], 4, nv))
+     if n_elements(colors) eq 0 then colors = new $
+     else colors = [[colors], [new]]
+     self.model->remove, o
+     obj_destroy, o
+  endfor
+  if n_elements(verts) eq 0 then return
+  
+  help, verts, conn
+  self.merged = obj_new('idlgrpolygon', verts, poly = conn, $
+                        vert_colors = colors)
+  self.model->add, self.merged
+end
+
+pro dg_iso::set_substruct, index, substruct, force = force
   old = *self.substructs[index]
-  if array_equal(substruct, old) then return
+  if ~keyword_set(force) && array_equal(substruct, old) then return
+  self.is_merged = 0
+  self.model->remove, self.merged
   *self.substructs[index] = substruct
 
   ;- get substruct isosurface
@@ -108,9 +145,9 @@ function dg_iso::event, event
   return, 1
 end
 
-function dg_iso::init, ptr, color = color, listener = listener, $
+function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
                   _extra = extra
-  junk = self->dg_client::init(ptr, listener, color = color)
+  junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
 
   sz = (*ptr).sz
   xra = [0,sz[1]]
@@ -135,21 +172,22 @@ function dg_iso::init, ptr, color = color, listener = listener, $
   for i = 0, 3, 1 do begin
      self.axes[i] = obj_new('idlgraxis', 0, range=[0, sz[1]], $
                             loc=[0, sz[2] * (i / 2), sz[3] * (i mod 2)], maj=0, min=0, $
-                            thick=2, /exact)
+                            thick=2, /exact, color=[255,255,255])
      
      self.axes[4 + i] = obj_new('idlgraxis', 1, range=[0, sz[2]], $
                                 loc=[sz[1] * (i/2), 0, sz[3] * (i mod 2)], maj=0, min=0, $
-                                thick=2, /exact)
+                                thick=2, /exact, color=[255,255,255])
 
      self.axes[8 + i] = obj_new('idlgraxis', 2, range=[0, sz[3]], thick=2, $
-                                loc=[sz[1] * (i/2), sz[2] *(i mod 2), 0], maj=0, min=0, /exact)
+                                loc=[sz[1] * (i/2), sz[2] *(i mod 2), 0], maj=0, min=0, /exact, $
+                               color=[255,255,255])
      model->add, self.axes[i]
      model->add, self.axes[4+i]
      model->add, self.axes[8+i]
   endfor
-  self.axes[0]->setProperty, title=obj_new('idlgrtext', 'X')
-  self.axes[4]->setProperty, title=obj_new('idlgrtext', 'Y')
-  self.axes[8]->setProperty, title=obj_new('idlgrtext', 'Z')
+  self.axes[0]->setProperty, title=obj_new('idlgrtext', 'X', color=[255,255,255])
+  self.axes[4]->setProperty, title=obj_new('idlgrtext', 'Y', color=[255,255,255])
+  self.axes[8]->setProperty, title=obj_new('idlgrtext', 'Z', color=[255,255,255])
 
   model->add, l1
   model->add, l2
@@ -157,18 +195,30 @@ function dg_iso::init, ptr, color = color, listener = listener, $
   result = self->interwin::init(model, $
                                 bgcolor=byte([20, 20, 20]), $
                                 xra = xra, yra = yra, zra = zra, $
-                                _extra = extra, /rotate, eye = 1.5 * max(zra), /depth_test_disable)
+                                _extra = extra, /rotate, eye = 1.5 * max(zra))
   self->set_rotation_center, sz[1:3]/2.
   return, 1
 end
 
+pro dg_iso::cleanup
+  for i = 0, 11, 1 do begin
+     self.axes[i]->getProperty, title = text
+     obj_destroy, text
+     obj_destroy, self.axes[i]
+  endfor
+  obj_destroy, [self.sub_isos, self.axes, self.merged]
+  self->interwin::cleanup
+  self->dg_client::cleanup
+end
+  
 pro dg_iso__define
   data = {dg_iso, $
           inherits interwin, $
           inherits dg_client, $
           sub_isos: objarr(8), $
           axes:objarr(12), $
-          xcen:0., ycen:0., zcen:0.}
+          xcen:0., ycen:0., zcen:0., $
+          merged:obj_new(), is_merged:0B}
 end
 
 

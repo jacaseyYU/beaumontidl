@@ -1,8 +1,8 @@
-pro dg_slice::set_substruct, index, substruct
+pro dg_slice::set_substruct, index, substruct, force = force
   ptr = self.ptr
 
   old = self->get_substruct(index)
-  if array_equal(substruct, old) then return
+  if ~keyword_set(force) && array_equal(substruct, old) then return
   *self.substructs[index] = substruct
 
   venn = venn(old, substruct)
@@ -64,9 +64,12 @@ end
 
 pro dg_slice::cleanup
   self->slice3::cleanup
+  ptr_free, self.mask
+  self->dg_client::cleanup
 end
 
-function dg_slice::init, ptr, color = color, listener = listener, _extra = extra
+function dg_slice::init, ptr, color = color, listener = listener, $
+                         alpha = alpha, _extra = extra
   ;- make a cube
   cube = fltarr(max((*ptr).x), max((*ptr).y), max((*ptr).v))
   cube[(*ptr).x, (*ptr).y, (*ptr).v] = (*ptr).t
@@ -74,7 +77,7 @@ function dg_slice::init, ptr, color = color, listener = listener, _extra = extra
   self.mask = ptr_new(byte(*cube * 0), /no_copy)
 
   junk = self->slice3::init(cube, slice = 2, _extra = extra)
-  junk = self->dg_client::init(ptr, listener, color = color)
+  junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
 
   self->add_image, obj_new('cnbgrmask', self.mask, nmask=8, slice=2, $
                            /noscale, color = color, alpha=1., blend=[3,4])

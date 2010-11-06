@@ -13,7 +13,10 @@ pro dg_dendroplot::set_substruct, index, substruct, force = force
      self->interwin::add_graphics_atom, plot, position = 0
   endif else begin
      self.plots[index]->setProperty, datax = xy[0,*], $
-                                             datay = xy[1,*]
+                                             datay = xy[1,*], $
+                                             color = self.colors[*,index], $
+                                             alpha = self.alpha[index], $
+                                             thick = 3 + .25 * index
   endelse
   self.redraw = 1
 end
@@ -64,15 +67,16 @@ pro dg_dendroplot::toggle_normplots
 end
 
 function dg_dendroplot::init, ptr, color = color, $
+                              alpha = alpha, $
                               listener = listener, $
                               _extra = extra
   
-  junk = self->dg_client::init(ptr, listener, color = color)
+  junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
   dendro = dplot_obj(ptr, max((*ptr).clusters+1))
   self.baseplot = dendro
   yra = minmax((*ptr).height) + range((*ptr).height) * [-.05, .05]
   axis = obj_new('idlgraxis', direction = 1, range = yra)
-  model = obj_new('IDLgrModel')
+  model = obj_new('IDLgrModel', /depth_test_disable)
   model->add, dendro
   model->add, axis
 
@@ -84,7 +88,8 @@ end
 
 pro dg_dendroplot::cleanup
   self->interwin::cleanup
-  obj_destroy, [self.plots]
+  self->dg_client::cleanup
+  obj_destroy, [self.plots, self.baseplot]
 end
 
 pro dg_dendroplot__define

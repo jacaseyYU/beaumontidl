@@ -1,8 +1,17 @@
+pro dg_client::set_alpha, index, alpha
+  self.alpha[index] = alpha
+end
+
+pro dg_client::set_color, index, color, alpha = alpha
+  self.colors[*,index] = color
+  if n_elements(alpha) ne 0 then self.alpha[index] = alpha
+end
+  
 pro dg_client::set_current, id
   self.current = id
 end
 
-pro dg_client::set_substruct
+pro dg_client::set_substruct, force = force
   message, 'cannot call this method directly'
 end
 
@@ -20,18 +29,23 @@ pro dg_client::cleanup
   ptr_free, self.substructs
 end
 
-function dg_client::init, ptr, listener, colors = colors
+function dg_client::init, ptr, listener, colors = colors, alpha = alpha
   self.ptr = ptr
   for i = 0, 7 do self.substructs[i] = ptr_new(-10)
 
   if ~keyword_set(colors) then $
      colors = transpose(fsc_color(['crimson', 'royalblue', 'orange', 'purple', $
                                   'yellow', 'teal', 'brown', 'green'], /triple))
+  if n_elements(alpha) eq 0 then alpha = replicate(.8, 8)
   self.colors = colors
+  self.alpha = alpha
   self.listener = n_elements(listener) gt 0 ? $
                   listener : -1
-  self.alpha[*] = .5
   return, 1
+end
+
+pro dg_client::cleanup
+  ptr_Free, self.substructs
 end
 
 pro dg_client__define
