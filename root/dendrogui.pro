@@ -34,36 +34,38 @@ pro dendrogui_event, event
   data = (*sptr).data
   ptr = (*sptr).ptr
   color = (*sptr).color
+  alpha = (*sptr).alpha
   case uval of
      'select': dendrogui_maskselect_event, event, sptr
      'color': dendrogui_color_event, event, sptr
      'ddb': begin
         if obj_valid((*sptr).dd) then break
-        (*sptr).dd = obj_new('dg_dendroplot', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200)
+        (*sptr).dd = obj_new('dg_dendroplot', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200, $
+                            alpha = alpha)
         (*sptr).dd->run
         dendrogui_sync_clients, sptr
      end
      'dpb': begin
         if obj_valid((*sptr).dp) then break
         if ~ptr_valid(data) then break
-        (*sptr).dp = obj_new('dg_interplot', ptr, *data, group_leader = tlb, color = color, listen = tlb, xoffset = 200)
+        (*sptr).dp = obj_new('dg_interplot', ptr, *data, group_leader = tlb, color = color, $
+                             listen = tlb, xoffset = 200, alpha = alpha)
         (*sptr).dp->run
         dendrogui_sync_clients, sptr
      end
      'dsb': begin
         if obj_valid((*sptr).ds) then break
-        (*sptr).ds = obj_new('dg_slice', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200)
-        restore, '~/perseus/catalogs/per_yso_model.sav'
-        o = model->get(/all)
-        model->remove, o[0]
-        (*sptr).ds->add_graphics_atom, o[0]
+        (*sptr).ds = obj_new('dg_slice', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200, $
+                            alpha = alpha)
         (*sptr).ds->run
         dendrogui_sync_clients, sptr
      end
      'dib': begin
-        if obj_valid((*sptr).di) then break
-        (*sptr).di = obj_new('dg_iso', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200)
-        (*sptr).di->run
+        if ~obj_valid((*sptr).di) then begin
+           (*sptr).di = obj_new('dg_iso', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200, $
+                               alpha = alpha)
+           (*sptr).di->run
+        endif
         dendrogui_sync_clients, sptr, /iso
      end
      else:
@@ -176,16 +178,18 @@ pro dendrogui_set_id, id, sptr
   if obj_valid((*sptr).ds) then (*sptr).ds->set_current, id
 end
 
-pro dendrogui_sync_clients, sptr, iso = iso
+pro dendrogui_sync_clients, sptr, iso = iso, force = force
+  if keyword_set(iso) then widget_control, /hourglass
+
   for i = 0, 7, 1 do begin
      if obj_valid((*sptr).dp) then $
-        (*sptr).dp->set_substruct, i, *(*sptr).substructs[i]
+        (*sptr).dp->set_substruct, i, *(*sptr).substructs[i], force = force
      if obj_valid((*sptr).ds) then $
-        (*sptr).ds->set_substruct, i, *(*sptr).substructs[i]
+        (*sptr).ds->set_substruct, i, *(*sptr).substructs[i], force = force
      if obj_valid((*sptr).di) && keyword_set(iso) then $
-        (*sptr).di->set_substruct, i, *(*sptr).substructs[i]
+        (*sptr).di->set_substruct, i, *(*sptr).substructs[i], force = force
      if obj_valid((*sptr).dd) then $
-        (*sptr).dd->set_substruct, i, *(*sptr).substructs[i]
+        (*sptr).dd->set_substruct, i, *(*sptr).substructs[i], force = force
   endfor
 end
 
@@ -200,13 +204,29 @@ end
   
 pro dendrogui_color_event, event, sptr
   ;- pick a new color
-  new = cnb_pickcolor(/brewer, cancel = cancel)
-  if cancel then return
   
   ;- update the proper mask
   for i = 0, 7 do if event.id eq (*sptr).colors[i] then break
   assert, i lt 8
-  help, color
+
+  old = (*sptr).color[*,i]
+  new = cnb_pickcolor(/brewer, cancel = cancel, $
+                     red = old[0], green=old[1], blue=old[2], $
+                      alpha=(*sptr).alpha[i])
+  if cancel then return
+
+  (*sptr).color[*,i] = new[0:2]
+  (*sptr).alpha[i] = new[3]
+
+  widget_control, (*sptr).colors[i], $
+                  set_value = rebin(reform(byte(new[0:2]), 1,1,3), 20, 20, 3)
+                                                   
+  if obj_valid((*sptr).dd) then (*sptr).dd->set_color, i, new[0:2], alpha = new[3]
+  if obj_valid((*sptr).dp) then (*sptr).dp->set_color, i, new[0:2], alpha = new[3]
+  if obj_valid((*sptr).ds) then (*sptr).ds->set_color, i, new[0:2], alpha = new[3]
+  if obj_valid((*sptr).di) then (*sptr).di->set_color, i, new[0:2], alpha = new[3]
+  dendrogui_sync_clients, sptr, /iso, /force
+
 end
 
 
@@ -259,15 +279,17 @@ pro dendrogui, ptr, data = data
 
 
   substructs = ptrarr(8)
+  alpha = replicate(.7, 8)
   for i = 0, 7 do substructs[i] = ptr_new(-10)
   state={rows:rows, selects:selects, colors:colors, $
          index:0, uncheck_bmp:check, check_bmp:red_check, $
          dd:dd, dp:dp, ds:ds, di:di, substructs:substructs, ptr:ptr, $
-         data:n_elements(data) ne 0 ? ptr_new(data) : ptr_new(), color:color, $
+         data:n_elements(data) ne 0 ? ptr_new(data) : ptr_new(), $
+         color:color, alpha:alpha, $
          listen:1, old_listen:0, drag:0}
   sptr = ptr_new(state, /no_copy)
   widget_control, tlb, set_uvalue = sptr
   widget_control, tlb, /realize
 
-  xmanager, 'dendrogui', tlb, /no_block
+  xmanager, 'dendrogui', tlb, cleanup='dendrogui_cleanup', /no_block
 end

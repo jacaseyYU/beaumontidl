@@ -47,6 +47,10 @@ pro roiwin::setButton, translate = translate, $
   self->interwin::setButton, translate = translate, $
                              rotate = rotate, resize = resize
   if keyword_set(roi) then begin
+     if self.doRoi then begin
+        self->reset_roi
+        return
+     endif
      self.doRoi = 1
      widget_control, self.roiButton, set_value = self.bmp_roi_select
      widget_control, self.translateButton, set_value = self.bmp_translate_deselect
@@ -81,7 +85,7 @@ end
 
 pro roiwin::cleanup
   self->interwin::cleanup
-  obj_destroy, self.roiplot, self.roi
+  obj_destroy, [self.roiplot, self.roi]
 end
 
 pro roiwin__define

@@ -261,7 +261,7 @@ END ;---------------------------------------------------------------------------
 
 FUNCTION cnb_pickcolor, currentColorIndex, StartIndex=startIndex, Title=title, $
    Group_Leader=groupLeader, Cancel=cancelled, Names=name, CurrentColor=currentColor, $
-   BREWER=brewer
+   BREWER=brewer, red = rval, green = gval, blue = bval, alpha = aval
 
    ; Device must support windows.
 
@@ -451,13 +451,17 @@ IF needSliders THEN BEGIN
 
       ; Set the current color values in sliders.
 
+   if n_elements(rval) ne 0 then r[currentColorIndex] = rval
+   if n_elements(gval) ne 0 then g[currentColorIndex] = gval
+   if n_elements(bval) ne 0 then b[currentColorIndex] = bval
+   if n_elements(aval) eq 0 then aval = 0.5
    redID = Widget_Slider(sliderbase, Scr_XSize=200, Value=r[currentColorIndex], $
       Max=255, Min=0, Title='Red')
    greenID = Widget_Slider(sliderbase, Scr_XSize=200, Value=g[currentColorIndex], $
       Max=255, Min=0, Title='Green')
    blueID = Widget_Slider(sliderbase, Scr_XSize=200, Value=b[currentColorIndex], $
       Max=255, Min=0, Title='Blue')
-   alphaID = cw_fslider(sliderbase, xsize=200, value=0.5, min=0., max=1., title='Alpha')
+   alphaID = cw_fslider(sliderbase, xsize=200, value=aval, min=0., max=1., title='Alpha')
 ENDIF ELSE BEGIN
 
    redID = 0L
