@@ -109,15 +109,12 @@ pro dg_interplot::update_plots, snap = snap
   for i = 0, 7, 1 do begin
      ids = *self.substructs[i]
 
-     ;- what IDs belong to this substruct?
-     if ids[0] lt 0 then continue
-     ids = [ids]
-
-     dx = x[ids] & dy = y[ids]
      if min(ids) lt 0 then begin
         dx = [!values.f_nan]
         dy = [!values.f_nan]
-     endif
+     endif else begin
+        dx = [x[ids]] & dy = [y[ids]]
+     endelse
      if obj_valid(self.subplots[i]) then begin
         self.subplots[i]->setProperty, datax = dx, datay = dy
      endif else begin

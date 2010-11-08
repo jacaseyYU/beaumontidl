@@ -1,1 +1,0 @@
-/Users/beaumont/idl/pro/local/cnbgrimage__define.pro

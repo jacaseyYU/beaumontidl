@@ -1,1 +1,0 @@
-/Users/beaumont/idl/pro/local/documented/nanswap.pro
