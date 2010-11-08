@@ -70,7 +70,6 @@ function roiwin::init, model, $
   if ~file_test(file) then message, 'cannot find roi.bmp'
   roi_im = read_image(file)
   roi_im = transpose(congrid(roi_im, 3, 20, 20), [1,2,0])
-  help, roi_im
   select = roi_im & select[*,*,0] = 255B
   self.bmp_roi_select = select
   self.bmp_roi_deselect = roi_im

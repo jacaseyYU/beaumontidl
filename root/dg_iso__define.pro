@@ -11,6 +11,8 @@ end
 pro dg_iso::merge_isos
   self.is_merged = 1
   offset = 0L
+  self.model->remove, self.merged
+  obj_destroy, self.merged
   for i = 0, 7 do begin
      o = self.sub_isos[i]
      if ~obj_valid(o) then continue
@@ -28,12 +30,9 @@ pro dg_iso::merge_isos
      if n_elements(colors) eq 0 then colors = new $
      else colors = [[colors], [new]]
      self.model->remove, o
-     obj_destroy, o
   endfor
   if n_elements(verts) eq 0 then return
-  
-  help, verts, conn
-  self.merged = obj_new('idlgrpolygon', verts, poly = conn, $
+    self.merged = obj_new('idlgrpolygon', verts, poly = conn, $
                         vert_colors = colors)
   self.model->add, self.merged
 end
@@ -96,7 +95,6 @@ function dg_iso::make_polygon, id, _extra = extra
   ;- surface to polygon
   cube[x, y, z] = (*ptr).t[ind]
   lo2 = min(cube) & hi2 = max(cube)
-  print, lo, hi
   rgb = bytarr(256, 3)
   rgb[*,0] = extra.color[0]
   rgb[*,1] = extra.color[1]
@@ -105,7 +103,6 @@ function dg_iso::make_polygon, id, _extra = extra
   struct = max(id)
   val = (*ptr).height[struct]
   val = (val - lo2) / (hi2 - lo2) * 255
-  print, val
   alpha = byte(50 * exp(-(indgen(256) - val)^2 / 75))
   plot, alpha
   o = obj_new('idlgrvolume', bytscl(cube), $

@@ -92,7 +92,6 @@ function slice3::event, event, draw_event = draw_event
 end
 
 pro slice3::resize, x, y
-  print, 'resizing'
   widget_control, self.base, update = 0
 
   b_g = widget_info(self.buttonbase, /geom)
@@ -185,7 +184,6 @@ function slice3::init, cube, slice = slice, $
   image = obj_new('CNBgrImage', cube, slice = slice)
   
   sz = image->get_2d_size()
-  print, sz
   slice_sz = image->get_slice_size()
   self.aspectRatio = 1. * sz[1] / sz[0]
   self.slice = slice
