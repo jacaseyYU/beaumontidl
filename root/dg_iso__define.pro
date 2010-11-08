@@ -35,6 +35,7 @@ pro dg_iso::merge_isos
     self.merged = obj_new('idlgrpolygon', verts, poly = conn, $
                         vert_colors = colors)
   self.model->add, self.merged
+  self->updatePolys
 end
 
 pro dg_iso::set_substruct, index, substruct, force = force
