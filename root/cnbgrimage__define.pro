@@ -187,7 +187,6 @@ function CNBgrImage::init, data, $
      dataPtr = ptr_new(data)
      dataVal = data
   endelse
-  help, dataval
   sz = size(dataVal)
   ndim = size(dataVal, /n_dim)
   if ndim eq 2 then sz[3] = 1
@@ -225,7 +224,6 @@ function CNBgrImage::init, data, $
   if n_elements(black) eq 0 then black = med - 5 * sig
   if n_elements(white) eq 0 then white = med + 5 * sig
   if ~keyword_set(color) then color = [1., 1., 1.]
-  help, dataVal
 
   self.minmax = minmax(dataVal, /nan)
   self.black = black

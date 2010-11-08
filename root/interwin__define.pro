@@ -155,7 +155,6 @@ function interwin::event, event
 
   ;- menu events
   if event.id eq self.mbar then begin
-     print, 'menu'
      return, 3
   endif
 
@@ -232,11 +231,9 @@ pro interwin::menu_event, event
      'File.Save as image': begin
         widget_control, self.draw, get_value= win
         win->getProperty, image_data = out
-        help, out
         result = dialog_write_image(out, file='image.png', type='PNG', options = o, $
                                     dialog_parent = self.base, /warn_exist)
         ;- by default, TIFF files write upside-down. Fix this.
-        help, o.type
         if o.type eq 'TIFF' then write_tiff, o.filename, reverse(out, 3) 
      end
      'File.Save view': begin
@@ -590,8 +587,6 @@ function interwin::init, model, $
   ;- set up view
   object_bounds, model, xra, yra, zra
   rect = [xra[0], yra[0], range(xra), range(yra)]
-  print, 'bounds', xra, yra, zra
-  print, 'rect: ', rect
   if keyword_set(xrange) then rect[[0,2]] = [xrange[0], xrange[1]-xrange[0]]
   if keyword_set(yrange) then rect[[1,3]] = [yrange[0], yrange[1]-yrange[0]]
   if ~keyword_set(zrange) then zrange= [max([xra, yra, zra], min=lo), lo]
@@ -601,8 +596,6 @@ function interwin::init, model, $
 
   cen = [rect[0] + rect[2]/2., rect[1] + rect[3]/2.]
   wid = [rect[2], rect[3]]
-  print, 'cen', cen
-  print, 'wid', wid
   view = obj_new('idlgrview', viewplane_rect=rect, _extra = extra, color = bgcolor)
 
   self.rescale_model = obj_new('idlgrmodel')

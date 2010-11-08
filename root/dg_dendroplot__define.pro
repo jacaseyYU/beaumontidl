@@ -104,7 +104,6 @@ end
 pro test_event, event
   widget_control, event.top, get_uvalue = obj
   obj->set_substruct, randomu(seed)*5, [event.substruct, floor(randomu(seed,3)*50)]
-  print, event.substruct
 end
 
 pro test

@@ -95,9 +95,7 @@ end
 
 pro test_event, event
   widget_control, event.top, get_uvalue = obj
-  print, 'event'
   obj->set_substruct, 0, event.substruct
-  print, event.substruct
 end
 
 pro test

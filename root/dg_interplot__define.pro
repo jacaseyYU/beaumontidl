@@ -134,7 +134,6 @@ pro dg_interplot::update_plots, snap = snap
   if keyword_set(snap) then begin
      self->reset_roi
      xra = minmax(x,/nan) & yra = minmax(y,/nan)
-     print, xra, yra
      xbad = range(xra) eq 0 || min(~finite(xra))
      ybad = range(yra) eq 0 || min(~finite(yra))
      
@@ -146,7 +145,6 @@ pro dg_interplot::update_plots, snap = snap
      self.view_cen = [mean(xra), mean(yra)]
      self.view_wid = [range(xra), range(yra)] * 1.05
      tags = tag_names(*self.data)
-     print, tags[[xid, yid]]
      self.axtitle[0]->setProperty, strings=tags[xid]
      self.axtitle[1]->setProperty, strings=tags[yid]
      self->update_viewplane
