@@ -70,9 +70,8 @@ end
 
 function dg_slice::init, ptr, color = color, listener = listener, $
                          alpha = alpha, _extra = extra
-  ;- make a cube
-  cube = fltarr(max((*ptr).x), max((*ptr).y), max((*ptr).v))
-  cube[(*ptr).x, (*ptr).y, (*ptr).v] = (*ptr).t
+  cube = dendro2cube(ptr)
+
   cube = ptr_new(cube, /no_copy)
   self.mask = ptr_new(byte(*cube * 0), /no_copy)
 

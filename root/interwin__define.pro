@@ -575,6 +575,7 @@ function interwin::init, model, $
                          rotate = rotate, $
                          group_leader = group_leader, $
                          bgcolor = bgcolor, $
+                         title = title, $
                          _extra = extra
 
   if n_params() eq 0 || ~obj_valid(model) || ~obj_isa(model, 'IDLGRMODEL') then begin
@@ -607,8 +608,8 @@ function interwin::init, model, $
      view->setProperty, zclip = zrange
   ;- set up widgets
   base = widget_base(event_func='interwin_event', notify_realize='interwin_realize', /col, frame = 3, $
-                        /tlb_size_events, group_leader = group_leader, mbar = mbar, $
-                     xoffset = xoffset, yoffset = yoffset)
+                     /tlb_size_events, group_leader = group_leader, mbar = mbar, $
+                     xoffset = xoffset, yoffset = yoffset, title = title)
   
   ;- a dummy base to hold the uvalue
   dummy = widget_base(base)

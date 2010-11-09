@@ -193,7 +193,8 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
   result = self->interwin::init(model, $
                                 bgcolor=byte([20, 20, 20]), $
                                 xra = xra, yra = yra, zra = zra, $
-                                _extra = extra, /rotate, eye = 1.5 * max(zra))
+                                _extra = extra, /rotate, eye = 1.5 * max(zra), $
+                                title='Isosurfaces')
   self->set_rotation_center, sz[1:3]/2.
   return, 1
 end

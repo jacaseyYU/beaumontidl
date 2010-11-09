@@ -74,6 +74,13 @@ function dg_interplot::event, event
      if self.listener ne 0 then widget_control, self.listener, $
         send_event = send
   endif
+  ;- also send keyboard events to listener
+  kbrd_ev = size(super, /tname) eq 'STRUCT' && $
+     tag_names(super, /struct) eq 'INTERWIN_EVENT' && $
+     (super.type eq 5 || super.type eq 6) && self.listener ne 0 
+  if kbrd_ev then $
+     widget_control, self.listener, send_event = create_struct(super, name='DG_INTER2')
+                                                                  
 
   ;- log buttons
   if isStr && uval eq 'log1' then self->toggle_log, /xlog
@@ -92,6 +99,10 @@ end
 
 function dg_interplot::roi2substructs, count = count
   self.baseplot->getProperty, data = d
+  if n_elements(d) eq 0 || total(finite(d)) eq 0 then begin
+     count = 0
+     return, -1
+  endif
   hit = self.roi->containsPoints(d[0,*], d[1,*])
   return, where(hit, count)
 end
@@ -116,11 +127,12 @@ pro dg_interplot::update_plots, snap = snap
         dx = [x[ids]] & dy = [y[ids]]
      endelse
      if obj_valid(self.subplots[i]) then begin
-        self.subplots[i]->setProperty, datax = dx, datay = dy
+        self.subplots[i]->setProperty, datax = dx, datay = dy, color = self.colors[*,i], $
+                                               alpha = self.alpha[i]
      endif else begin
         self.subplots[i] = obj_new('idlgrplot', $
                                    dx, dy, $
-                                   color = self.colors[*,i], $
+                                   color = self.colors[*,i], alpha=self.alpha[i], $
                                    symbol = obj_new('idlgrsymbol', 4, thick=3), $
                                    linestyle = 6)
         self->add_graphics_atom, self.subplots[i], position = 2
@@ -201,7 +213,7 @@ function dg_interplot::init, ptr, $
   model->add, plot
   
   self.baseplot = plot
-  junk = self->roiwin::init(model, _extra = extra)
+  junk = self->roiwin::init(model, _extra = extra, title='Catalog')
   
   ;- extra widgets for selecting plot variables
   base2 = widget_base(self.base, col = 1)
@@ -210,10 +222,10 @@ function dg_interplot::init, ptr, $
   r2 = widget_base(base2, /row)
   lab1 = widget_label(r1, value='Variable 1')
   list1 = widget_droplist(r1, value = tags, uval='list')
-;  log1 = widget_button(r1, value='Toggle Log', uval='log1')
+  log1 = widget_button(r1, value='Toggle Log', uval='log1')
   lab2 = widget_label(r2, value='Variable 2')
   list2 = widget_droplist(r2, value = tags, uval='list')
-;  log1 = widget_button(r2, value='Toggle Log', uval='log2')
+  log1 = widget_button(r2, value='Toggle Log', uval='log2')
   widget_control, list2, set_droplist_select = 1
 
   self.varlists = [list1, list2]

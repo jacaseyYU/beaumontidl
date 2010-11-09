@@ -192,7 +192,8 @@ function slice3::init, cube, slice = slice, $
   model-> add, image
 
   result = self->interwin::init(model, xrange=[0,sz[0]], $
-                             yrange=[0,sz[1]], _extra = extra, image = image)
+                                yrange=[0,sz[1]], _extra = extra, image = image, $
+                                title='Slice')
   if result eq 0 then return, 0
 
   self.slider = widget_slider(self.base, min = 0, max = (slice_sz-1)>1, $
