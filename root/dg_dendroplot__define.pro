@@ -80,7 +80,7 @@ function dg_dendroplot::init, ptr, color = color, $
   model->add, dendro
   model->add, axis
 
-  return, self->interwin::init(model, _extra = extra)
+  return, self->interwin::init(model, _extra = extra, title='Dendrogram')
 
 
   return, 1

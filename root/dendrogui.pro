@@ -91,6 +91,7 @@ pro dendrogui_keyboard_event, event, sptr
      '7': dendrogui_set_id, 7, sptr
      'X': dendrogui_set_substruct, -2, sptr
      'I': dendrogui_sync_clients, sptr, /iso
+     'S': (*sptr).dosingle = ~((*sptr).dosingle)
      'L': dendrogui_set_substruct, get_leaves((*(*sptr).ptr).clusters), sptr
      else:
   endcase
@@ -145,7 +146,8 @@ pro dendrogui_substruct_event, event, sptr
   ;- any window except interplot selects this structure
   ;- plus substructs
   ptr = (*sptr).ptr
-  if ~strmatch(name, 'DG_INTERPLOT*', /fold) then begin
+  plotSubs = ~((*sptr).dosingle) && ~strmatch(name, 'DG_INTER*', /fold)
+  if plotSubs then begin
      assert, n_elements(substruct) eq 1
      substruct = leafward_mergers(substruct, (*ptr).clusters)
   endif
@@ -284,6 +286,7 @@ pro dendrogui, ptr, data = data
   state={rows:rows, selects:selects, colors:colors, $
          index:0, uncheck_bmp:check, check_bmp:red_check, $
          dd:dd, dp:dp, ds:ds, di:di, substructs:substructs, ptr:ptr, $
+         dosingle:0, $
          data:n_elements(data) ne 0 ? ptr_new(data) : ptr_new(), $
          color:color, alpha:alpha, $
          listen:1, old_listen:0, drag:0}

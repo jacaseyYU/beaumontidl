@@ -56,6 +56,6 @@ pro dg_client__define
           alpha:fltarr(8), $
           substructs:ptrarr(8), $
           current:0, $ ;- current mask
-          listener:0 $
+          listener:0L $
          }
 end

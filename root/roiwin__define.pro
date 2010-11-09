@@ -3,7 +3,7 @@ function roiwin::event, event
   super = self->interwin::event(event)
   if n_elements(uval) ne 0 && uval eq 'ROI' then self->setButton, /roi
   
-  if size(super, /tname) eq 'STRUCT' && $
+  if size(super, /tname) eq 'STRUCT' && tag_names(super, /struct) eq 'INTERWIN_EVENT' && $
      super.LEFT_CLICK && self.doRoi then begin
      self->add_roi_point, super.x, super.y
      result = create_struct(super, name='ROI_EVENT')
