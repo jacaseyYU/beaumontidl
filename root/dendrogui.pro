@@ -92,6 +92,13 @@ pro dendrogui_keyboard_event, event, sptr
      'X': dendrogui_set_substruct, -2, sptr
      'I': dendrogui_sync_clients, sptr, /iso
      'S': (*sptr).dosingle = ~((*sptr).dosingle)
+     'P': begin
+        ptr = (*sptr).ptr
+        id = (*sptr).substructs[(*sptr).index] & id = *id
+        if max(id) lt 0 then return
+        dendro_pivot, max(id), ptr
+        dendrogui_sync_clients, sptr, /pivot
+     end
      'L': dendrogui_set_substruct, get_leaves((*(*sptr).ptr).clusters), sptr
      else:
   endcase
@@ -180,8 +187,11 @@ pro dendrogui_set_id, id, sptr
   if obj_valid((*sptr).ds) then (*sptr).ds->set_current, id
 end
 
-pro dendrogui_sync_clients, sptr, iso = iso, force = force
+pro dendrogui_sync_clients, sptr, iso = iso, force = force, pivot = pivot
   if keyword_set(iso) then widget_control, /hourglass
+
+  if keyword_set(pivot) && obj_valid((*sptr).dd) then $
+     (*sptr).dd->redraw_baseplot
 
   for i = 0, 7, 1 do begin
      if obj_valid((*sptr).dp) then $
@@ -191,7 +201,8 @@ pro dendrogui_sync_clients, sptr, iso = iso, force = force
      if obj_valid((*sptr).di) && keyword_set(iso) then $
         (*sptr).di->set_substruct, i, *(*sptr).substructs[i], force = force
      if obj_valid((*sptr).dd) then $
-        (*sptr).dd->set_substruct, i, *(*sptr).substructs[i], force = force
+        (*sptr).dd->set_substruct, i, *(*sptr).substructs[i], $
+        force = keyword_set(pivot) || keyword_set(force)
   endfor
 end
 

@@ -82,11 +82,18 @@ function dg_iso::make_polygon, id, _extra = extra
   x -= lo[0] & y -= lo[1] & z -= lo[2]
   if min(range) le 1 then return, obj_new()
   cube = fltarr(range[0], range[1], range[2])
-  cube[x, y, z] = 1
-  
+;  cube[x, y, z] = 1
+  cube[x,y,z] = (*ptr).t[ind]
+  h = histogram(cube[where(cube ne 0)], loc = l, nbin = 50)
+  cdf = 1. total(h, /cumul) / total(h)
+  val = interpol(loc, cdf, .1)
+
   ;-cube to surface
   if size(cube, /n_dim) ne 3 then return, obj_new()
-  isosurface, cube, 1, v, c
+;  isosurface, cube, 1, v, c
+  isosurface, cube, val, v, c
+  help, v, c
+
   if size(v, /n_dim) ne 2 then return, obj_new()
 ;  v = mesh_smooth(v, c)
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
@@ -157,7 +164,7 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
   sz = [0, xra[1], yra[1], zra[1]]
   
   zra = [min([xra, yra, zra], max=hi), hi]
-  zra += 3*range(zra) * [-1,1]
+  zra += 2*range(zra) * [-1,1]
   zra = reverse(zra)
 
   ;- lights
@@ -190,10 +197,11 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
   model->add, l1
   model->add, l2
   model->add, l3
+
   result = self->interwin::init(model, $
                                 bgcolor=byte([20, 20, 20]), $
                                 xra = xra, yra = yra, zra = zra, $
-                                _extra = extra, /rotate, eye = 1.5 * max(zra), $
+                                _extra = extra, /rotate, $
                                 title='Isosurfaces')
   self->set_rotation_center, sz[1:3]/2.
   return, 1
