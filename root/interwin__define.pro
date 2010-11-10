@@ -592,7 +592,7 @@ function interwin::init, model, $
   if keyword_set(yrange) then rect[[1,3]] = [yrange[0], yrange[1]-yrange[0]]
   if ~keyword_set(zrange) then zrange= [max([xra, yra, zra], min=lo), lo]
   zrange = [max(zrange, min=lo), lo]
-  zrange += .3 * range(zrange) * [1,-1]
+;  zrange += .3 * range(zrange) * [1,-1]
   if ~keyword_set(bgcolor) then bgcolor=[255, 255, 255]
 
   cen = [rect[0] + rect[2]/2., rect[1] + rect[3]/2.]
@@ -605,7 +605,7 @@ function interwin::init, model, $
   view->add, self.rescale_model
   self.rescale_model->add, self.rescale_plot
   if keyword_set(rotate) then $
-     view->setProperty, zclip = zrange
+     view->setProperty, zclip = zrange, eye = max(zrange) + .01
   ;- set up widgets
   base = widget_base(event_func='interwin_event', notify_realize='interwin_realize', /col, frame = 3, $
                      /tlb_size_events, group_leader = group_leader, mbar = mbar, $

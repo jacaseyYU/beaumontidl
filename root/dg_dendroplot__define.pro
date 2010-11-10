@@ -1,3 +1,13 @@
+pro dg_dendroplot::redraw_baseplot
+  ptr = self.ptr
+  self.model->remove, self.baseplot
+  obj_destroy, self.baseplot
+  dendro = dplot_obj(ptr, max((*ptr).clusters+1))
+  self.baseplot = dendro
+  self.model->add, self.baseplot, pos = 0
+  self->request_redraw
+end
+
 pro dg_dendroplot::set_substruct, index, substruct, force = force
 
   if ~keyword_set(force) && array_equal(substruct, *self.substructs[index]) then return
@@ -15,8 +25,13 @@ pro dg_dendroplot::set_substruct, index, substruct, force = force
      self.plots[index]->setProperty, datax = xy[0,*], $
                                              datay = xy[1,*], $
                                              color = self.colors[*,index], $
-                                             alpha = self.alpha[index], $
-                                             thick = 3 + .25 * index
+                                             alpha = self.alpha[index] > 1., $
+                                             thick = 3
+     ;- send object to front
+     obj = self.model->get(/all)
+     nobj = n_elements(obj)
+     self.model->remove, self.plots[index]
+     self.model->add, self.plots[index], position=nobj-1
   endelse
   self.redraw = 1
 end
