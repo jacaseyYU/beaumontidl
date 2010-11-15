@@ -1,5 +1,3 @@
-;XXX hande 1 letter, no length matches better
-
 ;+
 ; PURPOSE:
 ;  Determines if the given word (possibly including blanks) is a valid
