@@ -18,7 +18,12 @@ pro read_dictionary
   ;- sowpods -- Used for tournament scrabble. Superset of TWL06.
   ;- words_[small | medum | large] -- not very useful
   dict_file = 'TWL06.txt'
-  readcol, '~/pro/scrabble/'+dict_file, dictionary, comment='#', format='a', /silent
+  file = file_which(dict_file)
+  if file eq '' then $
+     message, "Can't find dictionary file: "+dict_file
+
+  readcol, file, dictionary, comment='#', format='a', /silent
+
   dictionary = strlowcase(dictionary)
   letter_freq = bytarr(26, n_elements(dictionary))
   for i = 0L, n_elements(dictionary) - 1 do letter_freq[*,i] = letter_freq(dictionary[i])
