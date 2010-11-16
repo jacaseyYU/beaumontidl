@@ -20,7 +20,8 @@ pro dg_dendroplot::set_substruct, index, substruct, force = force
                     color =  self.colors[*,index], $
                     thick = 3)
      self.plots[index] = plot
-     self->interwin::add_graphics_atom, plot, position = 0
+     nobj = self.model->count()
+     self->interwin::add_graphics_atom, plot, position = nobj - 1
   endif else begin
      self.plots[index]->setProperty, datax = xy[0,*], $
                                              datay = xy[1,*], $
@@ -28,8 +29,7 @@ pro dg_dendroplot::set_substruct, index, substruct, force = force
                                              alpha = self.alpha[index] > 1., $
                                              thick = 3
      ;- send object to front
-     obj = self.model->get(/all)
-     nobj = n_elements(obj)
+     nobj = self.model->count()
      self.model->remove, self.plots[index]
      self.model->add, self.plots[index], position=nobj-1
   endelse

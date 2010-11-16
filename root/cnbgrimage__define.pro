@@ -64,6 +64,7 @@ function CNBgrImage::get_slice_size
 end
 
 pro CNBgrImage::set_slice_index, index
+  if self.pos[self.slice] eq index then return
   self.pos[self.slice] = 0 > index < (self.sz[self.slice] - 1)
   self->redraw
 end

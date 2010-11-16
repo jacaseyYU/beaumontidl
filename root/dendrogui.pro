@@ -66,7 +66,7 @@ pro dendrogui_event, event
                                alpha = alpha)
            (*sptr).di->run
         endif
-        dendrogui_sync_clients, sptr, /iso
+        dendrogui_sync_clients, sptr, /force, /iso
      end
      else:
   endcase
@@ -238,7 +238,7 @@ pro dendrogui_color_event, event, sptr
   if obj_valid((*sptr).dp) then (*sptr).dp->set_color, i, new[0:2], alpha = new[3]
   if obj_valid((*sptr).ds) then (*sptr).ds->set_color, i, new[0:2], alpha = new[3]
   if obj_valid((*sptr).di) then (*sptr).di->set_color, i, new[0:2], alpha = new[3]
-  dendrogui_sync_clients, sptr, /iso, /force
+  dendrogui_sync_clients, sptr, /force
 
 end
 

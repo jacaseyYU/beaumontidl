@@ -3,6 +3,7 @@ pro dg_slice::set_substruct, index, substruct, force = force
 
   old = self->get_substruct(index)
   if ~keyword_set(force) && array_equal(substruct, old) then return
+
   *self.substructs[index] = substruct
 
   venn = venn(old, substruct)
@@ -17,8 +18,15 @@ pro dg_slice::set_substruct, index, substruct, force = force
      if ind lt 0 then continue
      self->delta_mask, index, ind, /add
   endfor
-
+  
+  self.maskobj->redraw
   self->update_images
+  self->request_redraw
+end
+
+pro dg_slice::set_color, index, color, alpha = alpha
+  self->dg_client::set_color, index, color, alpha = alpha
+  self.maskobj->set_colors, self.colors
   self->request_redraw
 end
 
@@ -74,12 +82,13 @@ function dg_slice::init, ptr, color = color, listener = listener, $
 
   cube = ptr_new(cube, /no_copy)
   self.mask = ptr_new(byte(*cube * 0), /no_copy)
+  self.maskobj = obj_new('cnbgrmask', self.mask, nmask=8, slice=2, $
+                         /noscale, color = color, alpha=1., blend=[3,4])
 
   junk = self->slice3::init(cube, slice = 2, _extra = extra)
   junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
 
-  self->add_image, obj_new('cnbgrmask', self.mask, nmask=8, slice=2, $
-                           /noscale, color = color, alpha=1., blend=[3,4])
+  self->add_image, self.maskobj
   return, 1
 end
 
@@ -87,7 +96,8 @@ pro dg_slice__define
   data = {dg_slice, $
           inherits slice3, $
           inherits dg_client, $
-          mask:ptr_new()}
+          mask:ptr_new(), $
+          maskobj:obj_new()}
 end
 
 
