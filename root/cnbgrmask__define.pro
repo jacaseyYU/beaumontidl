@@ -53,7 +53,6 @@ function cnbgrmask::init, mask, $
      ncolor = csz[2]
      if csz[2] gt MAX_MASK then $
         message, 'Cannot have more than 8 colors'
-     self.colors = ptr_new(colors)
   endif else begin
      ncolor = keyword_set(nmask) ? nmask : 3
      if ncolor gt 8 then message, 'Cannot have more than 8 colors'
@@ -61,8 +60,20 @@ function cnbgrmask::init, mask, $
      tvlct, vec, /get
      vec = transpose(vec)
      colors = vec[*, findgen(ncolor) / ((ncolor -1) > 1) * 255.]
-     self.colors = ptr_new(colors)
   endelse
+  self->set_colors, colors
+
+  self->redraw
+  return, 1
+end
+  
+pro cnbgrmask::set_colors, colors
+  if ptr_valid(self.colors) && $
+     array_equal(*self.colors, colors) then return
+
+  ptr_free, self.colors
+  self.colors = ptr_new(colors)
+  ncolor = n_elements(colors)/3.
 
   ;- create lookup table
   lookup = bytarr(3, 255)
@@ -73,9 +84,8 @@ function cnbgrmask::init, mask, $
         lookup[*,i] = colors[*,j]
      endfor
   endfor
+  ptr_free, self.lookup
   self.lookup = ptr_new(lookup)
-  self->redraw
-  return, 1
 end
   
 pro cnbgrmask::cleanup
