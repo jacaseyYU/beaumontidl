@@ -19,7 +19,10 @@
 ;  Finished. Wrong guesses:b
 ;  Total wrong guesses:            1
 ;-
-pro play_hangman, word, debug = debug, nguess = nguess, silent = silent
+pro play_hangman, word, debug = debug, $
+                  nguess = nguess, silent = silent, $
+                  guessfunc = guessfunc
+
   compile_opt idl2
 
   if n_elements(word) eq 0 then word = 'apple'
@@ -37,12 +40,16 @@ pro play_hangman, word, debug = debug, nguess = nguess, silent = silent
   isDone = 0
   nguess = 0
   fmt = '("Round ", i2, " Guess: ", a, " Partial Solution: ", a)'
+  print, 'Starting game: '+partial
   while ~isDone do begin
      nguess++
      
      ;- guess a new letter
      ;- specific guessing algorithm goes here
-     guess = guess_infogain(partial, excludes, debug = debug)
+     if keyword_set(guessfunc) then $
+        guess = call_function(guessfunc, partial, excludes) $
+     else $
+        guess = guess_infogain(partial, excludes, debug = debug)
 
      if size(guess, /tname) ne 'STRING' then stop
 
