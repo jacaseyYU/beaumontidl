@@ -9,6 +9,7 @@ function guess_human, partial, excludes
         strlen(result) eq 1 && $
         result ge 'a' && result le 'z' && $
         (n_elements(excludes) eq 0 || total(excludes eq result) eq 0)
+     isDone = isDone && total((byte(result))[0] eq byte(partial)) eq 0
   endwhile
   return, result
 end
