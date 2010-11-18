@@ -61,6 +61,8 @@ pro play_hangman, word, debug = debug, $
 
      ;- have we guessed all the letters?
      isDone = partial eq word
+     poss = possible_words(partial, excludes, count = ct)
+     isDone or= (ct eq 1)
 
      ;- print some output
      if ~keyword_set(silent) then $
@@ -70,7 +72,8 @@ pro play_hangman, word, debug = debug, $
   ;- we're done. Print a summary and finish
   if n_elements(excludes) eq 0 then excludes=' None'
   if ~keyword_set(silent) then begin
-     print, 'Finished. Wrong guesses: ', excludes
+     print, 'Finished. '+word
+     print, 'Wrong guesses: ', excludes
      print, 'Total wrong guesses: ', n_elements(excludes)
   endif
   
