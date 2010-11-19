@@ -31,34 +31,12 @@ function guess_infogain, partial, excludes, debug = debug, mc = mc
   todo = where(p_freq eq 0 and e_freq eq 0, todoct)
   done = where(p_freq ne 0 or e_freq ne 0, donect)
   for i = 0, todoct - 1, 1 do begin
-     ;- mask a mask for each possible word 
+     ;- make a mask for each possible word 
      ;- like 'b.a.n' where '.' are not yet revealed
      ;- and letters have been guessed
      letter = todo[i] + a
-     hitmask = (bytes eq letter) ne 0
-     for j = 0, donect - 1, 1 do $
-        hitmask or= (bytes eq done[j]+a)
-     mask = bytes * hitmask + (~hitmask) * dot
-     mask = string(mask)
-     assert, n_elements(mask) eq wct
-
-     ;- evaluate the entropy of this collection of masks,
-     ;- where each probability state is a unique mask, 
-     ;- and the probability value is the frequency of that mask.
-     states = mask[uniq(mask, sort(mask))]
-     if n_elements(states) eq 1 then begin
-        info_gain[todo[i]] = wct
-        continue
-     endif
-     ind = value_locate(states, mask)
-     h = histogram(ind)
-     p = 1. * h / total(h)
-     entropy = total((-p * alog(p)) > 0)
-     assert, finite(entropy)
-
-     ;- info gain is constant - new_entropy
-     ;info_gain[todo[i]] = -entropy
-     info_gain[todo[i]] = total(h * p)
+     info_gain[todo[i]] = expected_uncertainty(partial, excludes, letter, $
+                                         bytes)
   endfor
   if keyword_set(debug) then begin
      if n_elements(words) lt 20 then print, words
