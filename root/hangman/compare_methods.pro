@@ -1,7 +1,7 @@
 pro compare_methods, method1, method2, word = word, winner = winner
   
   if n_elements(method1) eq 0 then method1='guess_infogain'
-  if n_elements(method2) eq 0 then method2='guess_maxfreq';'guess_human'
+  if n_elements(method2) eq 0 then method2='guess_infogain_2';'guess_human'
 
   if n_elements(word) eq 0 then begin
      common scrabble, dictionary, letter_freq, len_ri
