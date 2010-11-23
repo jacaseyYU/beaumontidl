@@ -30,7 +30,7 @@ pro write_ds9reg, file, regions, system
 
   sz = n_elements(regions)
   output = strarr(sz)
-  for i = 0, sz - 1, 1 do begin
+  for i = 0L, sz - 1, 1 do begin
      rec = regions[i]
 
      ;- shape-specific information
@@ -72,7 +72,7 @@ pro write_ds9reg, file, regions, system
   printf, lun, 'global color=green dashlist=8 3 width=1 font="helvetical 10 normal" '+$
           'select=1 highlite=1 dash=0 fixed=0'
   printf, lun, system
-  for i = 0, sz - 1, 1 do printf, lun, output[i]
+  for i = 0L, sz - 1, 1 do printf, lun, output[i]
   free_lun, lun
 
 end
