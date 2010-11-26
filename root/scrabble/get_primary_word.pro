@@ -24,7 +24,7 @@ function get_primary_word, board, new_tiles, pos, direction
      3: return, get_vertical_word(board, pos, /single)
   endcase
   message, 'invalid direction number'
-  reutrn, -1
+  return, -1
 end
   
 pro test

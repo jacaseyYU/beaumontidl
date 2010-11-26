@@ -32,6 +32,7 @@ function get_best_move, board, tiles, hand = hand, struct = struct
   endif
 
   best_board = obj_new('bestlist', 50)
+  best_board->add, 0, board
 
   ;- order insertion points by row/column, and loop
   pbar, 'get best move', /new

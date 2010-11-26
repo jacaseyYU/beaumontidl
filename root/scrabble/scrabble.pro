@@ -113,6 +113,12 @@ pro scrabble_move, state, dir
   state.y = 0 > (state.y + dy) < 14
 end
 
+pro scrabble_init, id
+  child = widget_info(id, /child)
+  widget_control, child, get_uvalue = state
+  scrabble_redraw, state
+end
+
 pro scrabble_redraw, state
   widget_control, state.wid, get_value = wid
   wset, wid
@@ -131,11 +137,11 @@ end
 function scrabble, parent
   font='-monotype-arial-medium-r-normal--0-0-0-0-p-0-iso8859-1'
 
-
   if n_elements(parent) ne 0 then begin
      tlb = widget_base(parent, row = 1, event_func = 'scrabble_event', $
                        pro_set_value='scrabble_set_value', $
-                       func_get_value='scrabble_get_value')
+                       func_get_value='scrabble_get_value', $
+                       notify_realize='scrabble_init')
   endif else begin
      tlb = widget_base(row = 1, event_func = 'scrabble_event', $
                        pro_set_value='scrabble_set_value', $

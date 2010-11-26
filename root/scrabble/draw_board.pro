@@ -2,70 +2,79 @@ pro draw_board, board, hand1 = hand1, score1 = score1, hand2 = hand2, score2 = s
                 wid = wid, pstruct = pstruct
   common scrabble_board, letters, words
   common letter_values, values
+  common draw_common, pixbase, pixwin
+
   if n_elements(letters) eq 0 then create_board
   if n_elements(values) eq 0 then letter_values
   if n_elements(board) eq 0 then board=get_test_board()
 
+  xsz = 1200
+  ysz = 800
+
+  if n_elements(pixbase) eq 0 then begin
+     pixbase = 20
+     pixwin = 21
+     window, pixwin, xsize = !d.x_size, ysize = !d.y_size, /pix
+     window, pixbase, xsize = !d.x_size, ysize = !d.y_size, /pix
+     erase
+     pos = [.01, .01, .98, .98]
+     tvimage, bytarr(15, 15), pos = pos, /keep
+     plot, [15, 15], /nodata, xticks = 1, $
+           yticks = 1, yminor = 1,  pos = pos, /noerase, xminor = 1, $
+           xtickn = [' ', ' '], ytickn = [' ', ' '], xra = [0, 15], yra = [0, 15], $
+           /xsty, /ysty, color = fsc_color('charcoal')
+     !p.font = 1
+     
+                                ;- letter bonuses
+     hit = where(letters gt 1, ct)
+     h2 = array_indices(letters, hit)
+     for i = 0, ct - 1, 1 do begin
+        x = h2[0, i] & y = 14 - h2[1, i]
+        triple = letters[hit[i]] eq 3
+        polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
+                  color = triple ? fsc_color('blue') : $
+                  fsc_color('skyblue')
+     endfor
+  
+     ;- word bonuses
+     hit = where(words gt 1, ct)
+     h2 = array_indices(words, hit)
+     for i = 0, ct - 1, 1 do begin
+        x = h2[0, i] & y = 14 - h2[1, i]
+        triple = words[hit[i]] eq 3
+        polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
+                  color = triple ? fsc_color('crimson') : $
+                  fsc_color('salmon')
+     endfor
+
+     ;- grid
+     for i = 1, 14, 1 do begin
+        oplot, [0, 15], [i, i], color = fsc_color('charcoal')
+        oplot, [i, i], [0, 15], color = fsc_color('charcoal')
+     endfor
+  endif
+
   newWin = ~keyword_set(wid)
   wid = newWin ? 0 : wid
 
-  xsz = 1200
-  ysz = 800
   pixid = 9
 
   if newWin then wedit, wid, xsize = xsz, ysize = ysz
-  
-  window, pixid, xsize = !d.x_size, ysize = !d.y_size, /pix
-  erase
-;  pos = [.01, .05, .7, .95]
-  pos = [.01, .01, .98, .98]
-  tvimage, bytarr(15, 15), pos = pos, /keep
-  plot, [15, 15], /nodata, xticks = 1, $
-        yticks = 1, yminor = 1,  pos = pos, /noerase, xminor = 1, $
-        xtickn = [' ', ' '], ytickn = [' ', ' '], xra = [0, 15], yra = [0, 15], $
-        /xsty, /ysty, color = fsc_color('charcoal')
-  !p.font = 1
-
-  ;- letter bonuses
-  hit = where(letters gt 1, ct)
-  h2 = array_indices(letters, hit)
-  for i = 0, ct - 1, 1 do begin
-     x = h2[0, i] & y = 14 - h2[1, i]
-     triple = letters[hit[i]] eq 3
-     polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
-               color = triple ? fsc_color('blue') : $
-               fsc_color('skyblue')
-  endfor
-
-  ;- word bonuses
-  hit = where(words gt 1, ct)
-  h2 = array_indices(words, hit)
-  for i = 0, ct - 1, 1 do begin
-     x = h2[0, i] & y = 14 - h2[1, i]
-     triple = words[hit[i]] eq 3
-     polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
-               color = triple ? fsc_color('crimson') : $
-               fsc_color('salmon')
-  endfor
-
-  ;- grid
-  for i = 1, 14, 1 do begin
-     oplot, [0, 15], [i, i], color = fsc_color('charcoal')
-     oplot, [i, i], [0, 15], color = fsc_color('charcoal')
-  endfor
 
   ;- fill in letters
+  wset, pixwin
+  device, copy=[0, 0, !d.x_size, !d.y_size, 0, 0, pixbase]
   hit = where(board ne '', ct)
   if ct ne 0 then h2 = array_indices(board, hit)
   for i = 0, ct - 1, 1 do begin
      x = h2[0,i] & y = 14-h2[1,i] & letter = board[hit[i]]
      hashcol = keyword_set(new) && new[hit[i]] ? fsc_color('yellow') : fsc_color('charcoal')
-     polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
-               color = hashcol, /line_fill, spacing = .05, ori = 45, thick = 1.5
-     polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
-               color = hashcol, $
-               /line_fill, spacing = .05, $
-               ori = -45, thick = 1.5
+     ;polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
+     ;          color = hashcol, /line_fill, spacing = .05, ori = 45, thick = 1.5
+     ;polyfill, [x, x+1, x+1, x], [y, y, y+1, y+1], $
+     ;          color = hashcol, $
+     ;          /line_fill, spacing = .05, $
+     ;          ori = -45, thick = 1.5
      oplot, [x, x+1, x+1, x, x], [y, y, y+1, y+1, y], color = hashcol, thick=3
      xyouts, x+.5, y+.4, letter, color = fsc_color('white'), $
              charsize = 3, charthick = 2, align=.5
@@ -93,8 +102,7 @@ pro draw_board, board, hand1 = hand1, score1 = score1, hand2 = hand2, score2 = s
 
   pstruct = !p
   wset, wid
-  device, copy=[0,0, !d.x_size, !d.y_size, 0, 0, pixid]
-  wdelete, pixid
+  device, copy=[0,0, !d.x_size, !d.y_size, 0, 0, pixwin]
 end
 
 pro test
