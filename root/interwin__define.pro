@@ -668,9 +668,9 @@ function interwin::init, model, $
   ;- textual info label
   label = widget_label(base2, value = ' ', /dynamic_resize)
 
-  ;-draw window
+  ;-draw window. Maximum initial size is 500x500
   ratio = 1. * wid[1] / wid[0]
-  if ratio gt 1 then begin
+  if ratio lt 1 then begin
      xsize = 500
      ysize = 500 * ratio
   endif else begin

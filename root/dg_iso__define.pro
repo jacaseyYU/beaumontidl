@@ -17,6 +17,9 @@ pro dg_iso::merge_isos
      o = self.sub_isos[i]
      if ~obj_valid(o) then continue
      o->getProperty, color = col, alpha = a, data = v, poly = c
+     v[0,*] *= self.scale[0] & v[1,*] *= self.scale[1] & v[2,*] *= self.scale[2]
+     help, v
+     print, self.scale
      if n_elements(verts) eq 0 then verts = v else $
         verts = [[verts], [v]]
      nv = n_elements(v[0,*])
@@ -151,6 +154,7 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
   xra = [0,sz[1]]
   yra = [0,sz[2]]
   zra = [0,sz[3]]
+  self.scale = [1., 1., 1. * (sz[1] + sz[2]) /2. / sz[3]]
   model = obj_new('idlgrmodel')
 
   self.xcen = mean(xra) & self.ycen = mean(yra) & self.zcen = mean(zra)
@@ -168,15 +172,15 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
   l3 = obj_new('idlgrlight', type = 2, loc = [-sz[1], -sz[2], -2*sz[3]], inten=.7)
   ;- axes
   for i = 0, 3, 1 do begin
-     self.axes[i] = obj_new('idlgraxis', 0, range=[0, sz[1]], $
+     self.axes[i] = obj_new('idlgraxis', 0, range=[0, sz[1] * self.scale[1]], $
                             loc=[0, sz[2] * (i / 2), sz[3] * (i mod 2)], maj=0, min=0, $
                             thick=2, /exact, color=[255,255,255])
      
-     self.axes[4 + i] = obj_new('idlgraxis', 1, range=[0, sz[2]], $
+     self.axes[4 + i] = obj_new('idlgraxis', 1, range=[0, sz[2] * self.scale[2]], $
                                 loc=[sz[1] * (i/2), 0, sz[3] * (i mod 2)], maj=0, min=0, $
                                 thick=2, /exact, color=[255,255,255])
 
-     self.axes[8 + i] = obj_new('idlgraxis', 2, range=[0, sz[3]], thick=2, $
+     self.axes[8 + i] = obj_new('idlgraxis', 2, range=[0, sz[3] * self.scale[3]], thick=2, $
                                 loc=[sz[1] * (i/2), sz[2] *(i mod 2), 0], maj=0, min=0, /exact, $
                                color=[255,255,255])
      model->add, self.axes[i]
@@ -218,7 +222,8 @@ pro dg_iso__define
           sub_isos: objarr(8), $
           axes:objarr(12), $
           xcen:0., ycen:0., zcen:0., $
-          merged:obj_new(), is_merged:0B}
+          merged:obj_new(), is_merged:0B, $
+          scale:[1., 1., 1.]}
 end
 
 
