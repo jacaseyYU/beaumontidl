@@ -18,8 +18,6 @@ pro dg_iso::merge_isos
      if ~obj_valid(o) then continue
      o->getProperty, color = col, alpha = a, data = v, poly = c
      v[0,*] *= self.scale[0] & v[1,*] *= self.scale[1] & v[2,*] *= self.scale[2]
-     help, v
-     print, self.scale
      if n_elements(verts) eq 0 then verts = v else $
         verts = [[verts], [v]]
      nv = n_elements(v[0,*])
@@ -83,13 +81,26 @@ function dg_iso::make_polygon, id, _extra = extra
   hi = [mx, my, mz]
   range = hi - lo
   x -= lo[0] & y -= lo[1] & z -= lo[2]
+
+  ;- trying something new here: 
+  ;- isosurfacing on the data produces a cleaner surface
+  ;- than working with a binary mask. However, if all id's 
+  ;- don't belong to a single structure hierarchy, there is 
+  ;- no unique level to isosurface on. We should test for this and 
+  ;- correct in the future.
   if min(range) le 1 then return, obj_new()
-  cube = bytarr(range[0], range[1], range[2])
-  cube[x, y, z] = 1
+  cube = fltarr(range[0], range[1], range[2])
+  cube[(*ptr).x - lo[0], (*ptr).y - lo[1], (*ptr).v - lo[2]] = (*ptr).t
+  nanswap, cube, 0
+  mask = bytarr(range[0], range[1], range[2])
+  mask[x,y,z] = 1
+  lev = min((*ptr).height[id])
+  mask or= (cube lt lev)
+  cube *= mask
 
   ;-cube to surface
   if size(cube, /n_dim) ne 3 then return, obj_new()
-  isosurface, cube, 1, v, c
+  isosurface, cube, lev, v, c
 
   if size(v, /n_dim) ne 2 then return, obj_new()
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
@@ -170,17 +181,18 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
   l2 = obj_new('idlgrlight', type = 0, inten = 0.5, $
                color = [255,255,255])
   l3 = obj_new('idlgrlight', type = 2, loc = [-sz[1], -sz[2], -2*sz[3]], inten=.7)
+  sz[1:3] *= self.scale
   ;- axes
   for i = 0, 3, 1 do begin
-     self.axes[i] = obj_new('idlgraxis', 0, range=[0, sz[1] * self.scale[1]], $
+     self.axes[i] = obj_new('idlgraxis', 0, range=[0, sz[1]], $
                             loc=[0, sz[2] * (i / 2), sz[3] * (i mod 2)], maj=0, min=0, $
                             thick=2, /exact, color=[255,255,255])
      
-     self.axes[4 + i] = obj_new('idlgraxis', 1, range=[0, sz[2] * self.scale[2]], $
+     self.axes[4 + i] = obj_new('idlgraxis', 1, range=[0, sz[2]], $
                                 loc=[sz[1] * (i/2), 0, sz[3] * (i mod 2)], maj=0, min=0, $
                                 thick=2, /exact, color=[255,255,255])
 
-     self.axes[8 + i] = obj_new('idlgraxis', 2, range=[0, sz[3] * self.scale[3]], thick=2, $
+     self.axes[8 + i] = obj_new('idlgraxis', 2, range=[0, sz[3]], thick=2, $
                                 loc=[sz[1] * (i/2), sz[2] *(i mod 2), 0], maj=0, min=0, /exact, $
                                color=[255,255,255])
      model->add, self.axes[i]
