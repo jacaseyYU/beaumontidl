@@ -172,7 +172,17 @@ pro anneal::run
   endif
 
   ;- run the procedure
+  lastprint = systime(/seconds)
   for i = 0, nstep - 1, 1 do begin
+     if self.verbose ne 0 then begin
+        time = systime(/seconds)
+        if (time - lastprint) gt self.verbose then begin
+           print, i, temperature, best_fitness, $
+                  format='("Step, T, fitness: ", i10, 2x, 2(e0.5, 2x))'
+           lastprint = time
+        endif
+     endif
+
      temperature = self->temperature(i)
      new_state = self->selectTrial(state)
      new_fitness = self->fitness(new_state)
@@ -216,8 +226,9 @@ end
 ;  save: Set to a nonzero value to save every step of the
 ;  simulation. These can be retrieved using the getFitnesses and
 ;  getStates methods, but will use more memory
+;  verbose: Set to 1 to print output during calculation.
 ;-
-function anneal::init, start_state, nstep, save = save
+function anneal::init, start_state, nstep, save = save, verbose = verbose
   if n_params() ne 2 then begin
      print, 'annel calling sequence'
      print, "obj = obj_new('anneal', nstep, [/start])"
@@ -230,6 +241,7 @@ function anneal::init, start_state, nstep, save = save
   self.states = ptr_new()
   self.fitnesses = ptr_new()
   self.best_state = ptr_new()
+  self.verbose = keyword_set(verbose) ? verbose : 0
   return, 1
 end
 
@@ -258,5 +270,6 @@ pro anneal__define
           states : ptr_new(), $
           fitnesses : ptr_new(), $
           nstep : 0L, $
+          verbose:0., $
           doSave : 0B}
 end
