@@ -13,6 +13,12 @@
 ;  dx: The x size of the subregion to copy
 ;  dy: The y size of the subregion to copy
 ;
+; KEYWORD_PARAMETERS:
+;  add: Set to add the src region to dest
+;  sub: Set to subtract the src region from dest
+;  mult: Set to multiply the src region to dest
+;  div: Set to divide the src region from dest
+;
 ; BEHAVIOR:
 ;  Assuming both images are big enough, the program extracts a
 ;  dx-by-dy postage stamp from src at position (x1,y1), and inserts it
@@ -22,7 +28,9 @@
 ; MODIFICATION HISTORY:
 ;  December 2010: Written by Chris Beaumont
 ;-
-pro stamp, src, x1, y1, dest, x2, y2, dx, dy
+pro stamp, src, x1, y1, dest, x2, y2, dx, dy, $
+           add = add, mult = mult, div = div, sub = sub
+
   if n_params() ne 8 then begin
      print, 'callng sequence'
      print, 'stamp, src, x1, y1, dest, x2, y2, dx, dy'
@@ -54,7 +62,17 @@ pro stamp, src, x1, y1, dest, x2, y2, dx, dy
                  iy1 le sz1[2]-1 and iy2 le sz2[2]-1, ct)
   if ct eq 0 then return
 
-  dest[ix2[inside], iy2[inside]] = src[ix1[inside], iy1[inside]]
+  if keyword_set(add) then begin
+     dest[ix2[inside], iy2[inside]] += src[ix1[inside], iy1[inside]]
+  endif else if keyword_set(sub) then begin
+     dest[ix2[inside], iy2[inside]] -= src[ix1[inside], iy1[inside]]
+  endif else if keyword_set(mult) then begin
+     dest[ix2[inside], iy2[inside]] *= src[ix1[inside], iy1[inside]]
+  endif else if keyword_set(div) then begin
+     dest[ix2[inside], iy2[inside]] /= src[ix1[inside], iy1[inside]]
+  endif else begin
+     dest[ix2[inside], iy2[inside]] = src[ix1[inside], iy1[inside]]
+  endelse
 end
 
 pro test
