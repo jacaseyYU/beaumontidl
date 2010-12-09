@@ -251,6 +251,12 @@ pro dendrogui, ptr, data = data
      print, ' dendrogui, ptr, [data = data]'
      return
   end
+
+  if ~contains_tag(*ptr, 'CLUSTER_LABEL_H') then begin
+     message, /info, 'Pointer is out of date. Updating and overwriting'
+     ptr = update_topo(ptr)
+  endif
+
   if n_elements(data) eq 0 then message, /info, 'No external data provided'
   tlb = widget_base(/column)
   
