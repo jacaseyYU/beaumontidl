@@ -27,6 +27,9 @@
 ;
 ; MODIFICATION HISTORY:
 ;  December 2010: Written by Chris Beaumont
+;  December 13 2010: Changed implementation for speed. The lower and
+;  upper bounds for each array are computed directly, instead of using
+;  index arrays and WHERE. cnb.
 ;-
 pro stamp, src, x1, y1, dest, x2, y2, dx, dy, $
            add = add, mult = mult, div = div, sub = sub
@@ -48,31 +51,34 @@ pro stamp, src, x1, y1, dest, x2, y2, dx, dy, $
      ~is_scalar(dx) || ~is_scalar(dy) then $
         message, 'x1, x2, y1, y2, dx, and dy must be scalars'
 
-  ix = rebin(indgen(dx), dx, dy, /sample)
-  iy = rebin(1#indgen(dy), dx, dy, /sample)
+  ;- calculate the "trim" -- the amount of the stamp that 
+  ;- overhangs either src or dest.
+  l_trim = ((-1) * (x1 < x2)) > 0
+  b_trim = ((-1) * (y1 < y2)) > 0
+  r_trim = ((x1 + dx - sz1[1]) > (x2 + dx - sz2[1])) > 0
+  t_trim = ((y1 + dy - sz1[2]) > (y2 + dy - sz2[2])) > 0
 
-  ix1 = ix + x1
-  iy1 = iy + y1
-  ix2 = ix + x2
-  iy2 = iy + y2
+  x1_0 = x1 + l_trim & x1_1 = x1 + dx - 1 - r_trim
+  y1_0 = y1 + l_trim & y1_1 = y1 + dy - 1 - t_trim
+  x2_0 = x2 + l_trim & x2_1 = x2 + dx - 1 - r_trim
+  y2_0 = y2 + l_trim & y2_1 = y2 + dy - 1 - t_trim
 
-  inside = where(ix1 ge 0 and ix2 ge 0 and $
-                 ix1 le sz1[1]-1 and ix2 le sz2[1]-1 and $
-                 iy1 ge 0 and iy2 ge 0 and $
-                 iy1 le sz1[2]-1 and iy2 le sz2[2]-1, ct)
-  if ct eq 0 then return
+  ;- requested stamp is completely off both images
+  if (x1_1 lt x1_0) || (y1_1 lt y1_0) || $
+     (x2_1 lt x2_0) || (y2_1 lt y2_0) then return
 
   if keyword_set(add) then begin
-     dest[ix2[inside], iy2[inside]] += src[ix1[inside], iy1[inside]]
+     dest[x2_0:x2_1, y2_0:y2_1] += src[x1_0:x1_1, y1_0:y1_1]
   endif else if keyword_set(sub) then begin
-     dest[ix2[inside], iy2[inside]] -= src[ix1[inside], iy1[inside]]
+     dest[x2_0:x2_1, y2_0:y2_1] -= src[x1_0:x1_1, y1_0:y1_1]
   endif else if keyword_set(mult) then begin
-     dest[ix2[inside], iy2[inside]] *= src[ix1[inside], iy1[inside]]
+     dest[x2_0:x2_1, y2_0:y2_1] *= src[x1_0:x1_1, y1_0:y1_1]
   endif else if keyword_set(div) then begin
-     dest[ix2[inside], iy2[inside]] /= src[ix1[inside], iy1[inside]]
+     dest[x2_0:x2_1, y2_0:y2_1] /= src[x1_0:x1_1, y1_0:y1_1]
   endif else begin
-     dest[ix2[inside], iy2[inside]] = src[ix1[inside], iy1[inside]]
+     dest[x2_0:x2_1, y2_0:y2_1] = src[x1_0:x1_1, y1_0:y1_1]
   endelse
+
 end
 
 pro test
@@ -87,18 +93,37 @@ pro test
                         [0,0,1,1,0], [0,0,1,1,0],$
                         [0,0,0,0,0]])
 
-  ;- edge of dest
+  ;- upper edge of dest
   dest *= 0
   stamp, src, 0, 0, dest, 4, 4, 2, 2
   assert, array_equal( dest, [[0,0,0,0,0],[0,0,0,0,0], $
                               [0,0,0,0,0],[0,0,0,0,0], $
                               [0,0,0,0,1]])
 
-  ;- edge of src
+  ;- upper edge of src
   dest *= 0
   stamp, src, 1, 1, dest, 0, 0, 5, 5
   assert, array_equal( dest, [[1,0,0,0,0],[0,0,0,0,0], $
                               [0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]])
+
+  ;- lower edge of src
+  dest *= 0
+  stamp, src, -1, -1, dest, 0, 0, 2, 2
+  assert, array_equal( dest, [[0, 0, 0, 0, 0], [0, 1, 0, 0, 0],$
+                              [0, 0, 0, 0, 0], [0, 0 ,0,0, 0], [0,0,0,0,0]])
+
+  ;- lower edge of dest
+  dest *= 0
+  stamp, src, 0, 0, dest, -1, -1, 2, 2
+  assert, array_equal( dest, [[1, 0, 0, 0, 0], [0, 0, 0, 0, 0],$
+                              [0, 0, 0, 0, 0], [0, 0 ,0,0, 0], [0,0,0,0,0]])
+
+  ;- no overlap
+  dest *= 0
+  stamp, src, 0, 0, dest, 13, 13, 1, 1
+  assert, array_equal(dest, replicate(0, 5, 5))
+
+  print, 'All tests passed'
 
 end
 
