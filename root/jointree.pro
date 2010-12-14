@@ -65,6 +65,7 @@ pro test
           [0, 0, 1, 0, 0, 0], $
           [0, 0, 2, 2, 0, 0], $
           [0, 0, 0, 0, 0, 0]]
+  data = float(data)
   print, jointree(data, thresh = .5, map = map)
   print, data
   print,'map'
