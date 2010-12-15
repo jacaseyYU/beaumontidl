@@ -1,8 +1,7 @@
 function roiwin::event, event
   widget_control, event.id, get_uvalue = uval
   super = self->interwin::event(event)
-  if n_elements(uval) ne 0 && uval eq 'ROI' then self->setButton, /roi
-  
+  if size(uval, /type) eq 7 && uval eq 'ROI' then self->setButton, /roi
   if size(super, /tname) eq 'STRUCT' && tag_names(super, /struct) eq 'INTERWIN_EVENT' && $
      (super.LEFT_CLICK || super.LEFT_DRAG) && self.doRoi then begin
      self->add_roi_point, super.x, super.y

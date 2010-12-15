@@ -19,8 +19,11 @@ end
 
 pro dg_interplot::resize_points
   wid = self.view_wid
+  g = widget_info(self.draw, /geom)
+
+  sz = self.pt_sz * wid / (g.xsize > g.ysize)
   self.baseplot->getProperty, symbol = s
-  sz = .01 * wid
+
   s->setProperty, size=sz
 
   for i = 0, 7, 1 do begin
@@ -28,6 +31,7 @@ pro dg_interplot::resize_points
      self.subplots[i]->getProperty, symbol = s
      s->setProperty, size=sz
   endfor
+  self->request_redraw
 end
 
 pro dg_interplot::update_axes
@@ -70,6 +74,17 @@ function dg_interplot::event, event
   self->resize_points
   super = self->roiwin::event(event)
   self->update_axes
+  ;if tag_names(event, /struct) ne 'WIDGET_TIMER' then help, event, /struct
+
+  ;- changing line thickness
+  if event.id eq self.mbar && $
+     strmatch(event.value, 'Plot.Line Thickness*') then $
+        self->set_line_thickness, event.value
+
+  ;- changing point size
+  if event.id eq self.mbar && $
+     strmatch(event.value, 'Plot.Point Size*') then $
+        self->set_point_size, event.value
 
   ;- changing plot variables
   isStr = size(uval, /tname) eq 'STRING'
@@ -106,6 +121,30 @@ function dg_interplot::event, event
   return, 1
 end
 
+pro dg_interplot::set_line_thickness, code
+  case code of
+     'Plot.Line Thickness.1': th = 1
+     'Plot.Line Thickness.2': th = 2
+     'Plot.Line Thickness.3': th = 3
+     'Plot.Line Thickness.4': th = 4
+     else:
+  endcase
+
+  if obj_valid(self.baseplot) then self.baseplot->setProperty, thick = th
+  for i = 0, n_elements(self.subplots) -1 do $
+     if obj_valid(self.subplots[i]) then self.subplots[i]->setProperty, thick=th
+  self->update_plots
+end
+
+
+pro dg_interplot::set_point_size, code
+  ;- code is 'Plot.Point Size.[0-5]'
+  sz = strsplit(code, '.', /extract)
+  sz = fix(sz[n_elements(sz)-1])
+  self.pt_sz = sz
+  self->resize_points
+end
+
 pro dg_interplot::toggle_log, xlog = xlog, ylog = ylog
   if keyword_set(xlog) then self.xlog = ~self.xlog
   if keyword_set(ylog) then self.ylog = ~self.ylog
@@ -120,21 +159,25 @@ function dg_interplot::roi2substructs, count = count
      count = 0
      return, -1
   endif
+  if self.connect then begin
+     ;- every third item, starting with zero, is a unique point
+     ;- the next two points are its parent and nan
+     nd = n_elements(d[0,*])
+     d = d[*, indgen(nd/3)*3]
+  endif
   hit = self.roi->containsPoints(d[0,*], d[1,*])
   return, where(hit, count)
 end
 
 pro dg_interplot::connect_lines, x, y
   ptr = self.ptr
-  nst = max((*ptr).clusters)+2
+  nst = n_elements((*ptr).height)
   nleaf = n_elements((*ptr).clusters[0,*])+1
   parents = intarr(nst)
   id = indgen(n_elements((*ptr).clusters))/2 + nleaf
   parents[(*ptr).clusters] = id
-
   newx = reform(transpose([[x], [x[parents]], [x*!values.f_nan]]))
   newy = reform(transpose([[y], [y[parents]], [y*!values.f_nan]]))
-
   x = newx
   y = newy
 end
@@ -156,12 +199,15 @@ pro dg_interplot::update_plots, snap = snap
   ptr = self.ptr
   for i = 0, 7, 1 do begin
      ids = *self.substructs[i]
-
      if min(ids) lt 0 then begin
         dx = [!values.f_nan]
         dy = [!values.f_nan]
      endif else begin
-        dx = [x[ids]] & dy = [y[ids]]
+        if ~self.connect then begin
+           dx = [x[ids]] & dy = [y[ids]]
+        endif else begin
+           dx = [x[*, ids]] & dy = [y[*,ids]]
+        endelse
      endelse
      if obj_valid(self.subplots[i]) then begin
         self.subplots[i]->setProperty, datax = dx, datay = dy, color = self.colors[*,i], $
@@ -231,6 +277,7 @@ function dg_interplot::init, ptr, $
   junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
   tags = tag_names(data)
 
+  self.pt_sz = 4
   symbol = obj_new('idlgrsymbol', 4, thick=3)
   plot = obj_new('idlgrplot', $
                  data.(0), $
@@ -266,7 +313,20 @@ function dg_interplot::init, ptr, $
   log1 = widget_button(r2, value='Log', uval='log2')
   widget_control, list2, set_droplist_select = 1
 
-  test = widget_button(self.mbar, value='Test')
+  menu_desc = ['1\Plot', $
+               '1\Line Thickness', $
+               '0\1', $
+               '0\2', $
+               '0\3', $
+               '2\4', $
+               '1\Point Size', $
+               '0\0', $
+               '0\1', $
+               '0\2', $
+               '0\3', $
+               '0\4', $
+               '0\5']
+  plotbutton = cw_pdmenu(self.mbar, menu_desc, /mbar, /return_full_name)
 
   self.varlists = [list1, list2]
   nan = !values.f_nan
@@ -301,6 +361,7 @@ pro dg_interplot__define
           xlog:0B, $
           ylog:0B, $
           protected:0B, $
-          connect:0B}
+          connect:0B, $
+          pt_sz: 0}
 
 end

@@ -264,7 +264,7 @@ pro interwin::menu_event, event
      'View.3D rotation.Fix x axis':self->new_trackball, axis=0
      'View.3D rotation.Fix y axis':self->new_trackball, axis=1
      'View.3D rotation.Fix z axis':self->new_trackball, axis=2
-     else: help, event, /struct
+     else: 
   endcase
 end
 
