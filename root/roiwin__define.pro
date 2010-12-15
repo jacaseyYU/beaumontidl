@@ -4,7 +4,7 @@ function roiwin::event, event
   if n_elements(uval) ne 0 && uval eq 'ROI' then self->setButton, /roi
   
   if size(super, /tname) eq 'STRUCT' && tag_names(super, /struct) eq 'INTERWIN_EVENT' && $
-     super.LEFT_CLICK && self.doRoi then begin
+     (super.LEFT_CLICK || super.LEFT_DRAG) && self.doRoi then begin
      self->add_roi_point, super.x, super.y
      result = create_struct(super, name='ROI_EVENT')
      return, result
@@ -52,6 +52,9 @@ pro roiwin::setButton, translate = translate, $
         return
      endif
      self.doRoi = 1
+     self.doTranslate = 0
+     self.doRotate = 0
+     self.doRescale = 0
      widget_control, self.roiButton, set_value = self.bmp_roi_select
      widget_control, self.translateButton, set_value = self.bmp_translate_deselect
      widget_control, self.rotateButton, set_value = self.bmp_rotate_deselect

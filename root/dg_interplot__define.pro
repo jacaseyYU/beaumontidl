@@ -8,6 +8,15 @@ pro dg_interplot::run
   self->update_plots, /snap
 end
 
+pro dg_interplot::toggle_connect
+  self.connect = ~self.connect
+  linestyle = self.connect ? 0 : 6
+  if obj_valid(self.baseplot) then self.baseplot->setProperty, linestyle = linestyle
+  for i = 0, n_elements(self.subplots)-1, 1 do $
+     if obj_valid(self.subplots[i]) then self.subplots[i]->setProperty, linestyle=linestyle
+  self->update_plots
+end
+
 pro dg_interplot::resize_points
   wid = self.view_wid
   self.baseplot->getProperty, symbol = s
@@ -27,8 +36,11 @@ pro dg_interplot::update_axes
   loc = cen - .39 * wid
   xra = [cen[0]-.39*wid[0], cen[0]+.45*wid[0]]
   yra = [cen[1]-.39*wid[1], cen[1]+.45*wid[1]]
-  self.axes[0]->setProperty, location=loc, range=xra, ticklen = .03 * wid[1], /exact
-  self.axes[1]->setProperty, location=loc, range=yra, ticklen = .03 * wid[0], /exact
+
+  xra_ax = self.xlog ? 10^xra : xra
+  yra_ax = self.ylog ? 10^yra : yra
+  self.axes[0]->setProperty, location=loc, range=xra_ax, ticklen = .03 * wid[1], /exact
+  self.axes[1]->setProperty, location=loc, range=yra_ax, ticklen = .03 * wid[0], /exact
   self.axes[0]->getProperty, ticktext=t1
   self.axes[1]->getProperty, ticktext=t2
   t1->setProperty, char_dim=.02*wid
@@ -64,6 +76,11 @@ function dg_interplot::event, event
   if isStr && uval eq 'list' $
   then self->update_plots, /snap
 
+  ;- toggle line connection
+  if contains_tag(event, 'TYPE') && $
+     event.type eq 5 && event.release && strupcase(event.ch) eq 'C' then $
+     self->toggle_connect
+
   ;- updated roi
   if size(super, /tname) eq 'STRUCT' && $
      tag_names(super, /struct) eq 'ROI_EVENT' then begin
@@ -94,7 +111,7 @@ pro dg_interplot::toggle_log, xlog = xlog, ylog = ylog
   if keyword_set(ylog) then self.ylog = ~self.ylog
   self.axes[0]->setProperty, log = self.xlog
   self.axes[1]->setProperty, log = self.ylog
-  self->update_plots
+  self->update_plots, /snap
 end
 
 function dg_interplot::roi2substructs, count = count
@@ -107,14 +124,34 @@ function dg_interplot::roi2substructs, count = count
   return, where(hit, count)
 end
 
+pro dg_interplot::connect_lines, x, y
+  ptr = self.ptr
+  nst = max((*ptr).clusters)+2
+  nleaf = n_elements((*ptr).clusters[0,*])+1
+  parents = intarr(nst)
+  id = indgen(n_elements((*ptr).clusters))/2 + nleaf
+  parents[(*ptr).clusters] = id
+
+  newx = reform(transpose([[x], [x[parents]], [x*!values.f_nan]]))
+  newy = reform(transpose([[y], [y[parents]], [y*!values.f_nan]]))
+
+  x = newx
+  y = newy
+end
+
 pro dg_interplot::update_plots, snap = snap
+  eold = !except
+  !except = 0
+  
   if ~self.protected then self->reset_roi else self.protected = 0
   xid = widget_info(self.varlists[0], /droplist_select)
   yid = widget_info(self.varlists[1], /droplist_select)
   x = (*self.data).(xid)
   if self.xlog then x = alog10(x)
   y = (*self.data).(yid)
-  if self.ylog then x = alog10(x)
+  if self.ylog then y = alog10(y)
+
+  if self.connect then self->connect_lines, x, y
   self.baseplot->setProperty, datax = x, datay = y
   ptr = self.ptr
   for i = 0, 7, 1 do begin
@@ -162,6 +199,7 @@ pro dg_interplot::update_plots, snap = snap
   endif
   
   self->request_redraw
+  !except = eold
 end
      
 pro dg_interplot::resize, x, y
@@ -220,13 +258,15 @@ function dg_interplot::init, ptr, $
   self.base2 = base2
   r1 = widget_base(base2, /row)
   r2 = widget_base(base2, /row)
-  lab1 = widget_label(r1, value='Variable 1')
+  lab1 = widget_label(r1, value='X')
   list1 = widget_droplist(r1, value = tags, uval='list')
-  log1 = widget_button(r1, value='Toggle Log', uval='log1')
-  lab2 = widget_label(r2, value='Variable 2')
+  log1 = widget_button(r1, value='Log', uval='log1')
+  lab2 = widget_label(r2, value='Y')
   list2 = widget_droplist(r2, value = tags, uval='list')
-  log1 = widget_button(r2, value='Toggle Log', uval='log2')
+  log1 = widget_button(r2, value='Log', uval='log2')
   widget_control, list2, set_droplist_select = 1
+
+  test = widget_button(self.mbar, value='Test')
 
   self.varlists = [list1, list2]
   nan = !values.f_nan
@@ -260,6 +300,7 @@ pro dg_interplot__define
           data:ptr_new(), $
           xlog:0B, $
           ylog:0B, $
-          protected:0B}
+          protected:0B, $
+          connect:0B}
 
 end

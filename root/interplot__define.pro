@@ -101,9 +101,9 @@ function interplot::init, data, subset = subset, $
   r1 = widget_base(base2, /row)
   r2 = widget_base(base2, /row)
   tags = tag_names(data)
-  lab1 = widget_label(r1, value='Variable 1')
+  lab1 = widget_label(r1, value='X')
   list1 = widget_droplist(r1, value = tags)
-  lab2 = widget_label(r2, value='Variable 2')
+  lab2 = widget_label(r2, value='Y')
   list2 = widget_droplist(r2, value = tags)
   widget_control, list2, set_droplist_select = 1
   
