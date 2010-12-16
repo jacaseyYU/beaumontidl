@@ -169,13 +169,14 @@ function dg_interplot::roi2substructs, count = count
   return, where(hit, count)
 end
 
-pro dg_interplot::connect_lines, x, y
+pro dg_interplot::connect_lines, x, y, rootwards = rootwards
   ptr = self.ptr
   nst = n_elements((*ptr).height)
   nleaf = n_elements((*ptr).clusters[0,*])+1
   parents = intarr(nst)
   id = indgen(n_elements((*ptr).clusters))/2 + nleaf
   parents[(*ptr).clusters] = id
+  rootwards = parents
   newx = reform(transpose([[x], [x[parents]], [x*!values.f_nan]]))
   newy = reform(transpose([[y], [y[parents]], [y*!values.f_nan]]))
   x = newx
@@ -194,7 +195,7 @@ pro dg_interplot::update_plots, snap = snap
   y = (*self.data).(yid)
   if self.ylog then y = alog10(y)
 
-  if self.connect then self->connect_lines, x, y
+  if self.connect then self->connect_lines, x, y, rootwards = rootwards
   self.baseplot->setProperty, datax = x, datay = y
   ptr = self.ptr
   for i = 0, 7, 1 do begin
@@ -206,7 +207,7 @@ pro dg_interplot::update_plots, snap = snap
         if ~self.connect then begin
            dx = [x[ids]] & dy = [y[ids]]
         endif else begin
-           dx = [x[*, ids]] & dy = [y[*,ids]]
+           dx = x[*, ids] & dy = y[*, ids]
         endelse
      endelse
      if obj_valid(self.subplots[i]) then begin
