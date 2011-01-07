@@ -91,16 +91,18 @@ function mergetree, data, kernels, all_neighbors = all_neighbors
 end
 
 pro test
-  data = mrdfits('~/rosette/rosette_nicest_map.fits',0,h)
-;  data = [[0, 0, 0, 0, 0, 0], $
-;          [0, 2, 0, 0, 0, 0], $
-;          [0, 3, 2, 0, 0, 0], $
-;          [0, 2, 2, 0, 0, 0], $
-;          [0, 0, 1, 0, 0, 0], $
-;          [0, 0, 3, 2, 0, 0], $
-;          [0, 0, 0, 0, 0, 0]]
-;  data = float(data)
-  kernels = cnb_alllocmax(data, friends=3, minval=2)
-;  kernels=[13, 32]
+  data = [[.00, .00, .00, .00, .00, .00, .00, .00], $
+          [.00, .20, .30, .12, .11, .19, .15, .00], $
+          [.00, .32, .50, .30, .20, .40, .20, .00], $
+          [.00, .30, .31, .32, .35, .39, .35, .00], $
+          [.00, .60, .90, .70, .80, .70, .60, .00], $
+          [.00, .50, .60, .51, .53, .52, .35, .00], $
+          [.00, .15, .13, .70, .55, .60, .35, .00], $
+          [.00, .30, .12, .23, .33, .43, .53, .00], $
+          [.00, .00, .00, .00, .00, .00, .00, .00]]
+
+  data = float(data)
+  kernels = cnb_alllocmax(data, friends = 1)
+  print, kernels
   print, mergetree(data, kernels)
 end
