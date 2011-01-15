@@ -9,7 +9,7 @@
 ; MODIFICATION HISTORY:
 ;  July 2010: Written by Chris Beaumont
 ;-
-pro read_dictionary
+pro read_dictionary, sowpods = sowpods
   compile_opt idl2
   common scrabble, dictionary, letter_freq, len_ri
 
@@ -17,7 +17,7 @@ pro read_dictionary
   ;- TWL06 -- Seems to be the one closest to words with friends
   ;- sowpods -- Used for tournament scrabble. Superset of TWL06.
   ;- words_[small | medum | large] -- not very useful
-  dict_file = 'TWL06.txt'
+  dict_file = keyword_set(sowpods) ? 'sowpods.txt' : 'TWL06.txt'
   file = file_which(dict_file)
   if file eq '' then $
      message, "Can't find dictionary file: "+dict_file

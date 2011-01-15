@@ -1,14 +1,52 @@
+;+
+; PURPOSE:
+;  This function trains the SVM algorithm on a given data set. It is a
+;  wrapper to the svm_learn command line program in the SVMLight
+;  software package. For more details about the algorithm and its free
+;  parameters, consult svmlight.joachims.org.
+;
+; INPUTS:
+;  feature: The name of a SVM feature file (created, e.g., with
+;           feature2file)
+;
+; KEYWORD PARAMETERS:
+;  kernel: An integer specifying which kernel function to use. 
+;  c: Override the default value for the mis-classification
+;     penalty. Higher values penalize misclassification more strongly.
+;  d: Override the d parameter in the polynomial kernel
+;  g: Override gamma parameter in the radial basis function kernel
+;  s: Override s parameter in sigmoid/poly kernel
+;  r: Override c parameter in sigmoid/poly kernel
+;  u: Override u parameter in user-defined kernel
+;  verbose: Set to a non-zero value to print info
+;  precision: On output, contains the precision at which the training
+;             data are fit.
+;  recall: On output, contains the recall at which the training data
+;          are fit. 
+;  error: On output, contains an estimate of the error
+;  vc: On output, contains the VC dimension of the classification
+;  training_error: On output, contains the error when classifying the
+;                  training data.
+;  outfile: The name of a file to write the results to. Default to 'svm_learn.dat'
+;
+; OUTPUTS:
+;  The name of the file containing the parameters of the trained
+;  model.
+;
+; MODIFICATION HISTORY:
+;  2010: Written by Chris Beaumont
+;-  
 function svm_learn, feature, kernel = kernel, c = c, $
-                    d = d, g = g, s = s, r = r, u = u, $
-                    verbose = verbose, $
-                    precision = precision, recall = recall,$
-                    error = error, vc = vc, $
-                    training_error = training_error, $
-                    outfile = outfile
+               d = d, g = g, s = s, r = r, u = u, $
+               verbose = verbose, $
+               precision = precision, recall = recall,$
+               error = error, vc = vc, $
+               training_error = training_error, $
+               outfile = outfile
   
   if ~file_test(feature) then message, 'Must supply a valid training file'
   if keyword_set(outfile) then outname = outfile else $
-     outname = '/tmp/model.'+string(long(systime(/seconds)),format='(i0)')
+     outname = 'svm_learn.dat'
   
   
   ;- form keyword arguments
@@ -26,7 +64,15 @@ function svm_learn, feature, kernel = kernel, c = c, $
   spawn, cmd, stdout
   if keyword_set(verbose) then print, stdout
   if keyword_set(verbose) then print, 'Spawn command: ', cmd
+
   ;- parse the output to get diagnostics
+  catch, theError
+  if theError ne 0 then begin
+     catch, /cancel
+     print, 'Error parsing execution summary. Do not trust the output keywords!'
+     return, outname
+  endif
+
   row = where(strmatch(stdout, 'Estimated VCdim*'))
   ii = strpos(stdout[row], '<=')
   vc = float(strmid(stdout[row], ii+2))
