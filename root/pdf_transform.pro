@@ -18,9 +18,21 @@ function pdf_transform, p, y, yout
 
   ms = monseq(y, ct)
   dydx = abs(deriv(y))
+;  dydx = abs(y - shift(y, -1))
+;  dydx[0] = dydx[1] & dydx[n_elements(dydx)-1] = dydx[n_elements(dydx)-2]
   div_j = p  / dydx
 
   for i = 0, ny - 1, 1 do begin
+
+     ;- sum up all the overlapping bins
+     ;- reproduces stella's ppv cube
+;     result[i] = total(p * (y ge yout[i] - (yout[1] - yout[0])/2  and $
+;                            y lt yout[i] + (yout[1] - yout[0])/2) )
+;     continue
+
+
+
+     ;- find crossing points
      cross = (y  - yout[i]) * (shift(y,-1) - yout[i]) lt 0
      cross[n_elements(cross) - 1] = 0
      hit = where(cross, xct)
@@ -29,23 +41,8 @@ function pdf_transform, p, y, yout
      frac = (yout[i] - y[hit]) / (y[hit+1] - y[hit])
      assert, max(frac) le 1 and min(frac) ge 0
      result[i] = total(div_j[hit] * (1 - frac) + div_j[hit+1] * frac, /nan)
-     if (yout[i] / 1d5 lt .2 and yout[i]/1d5 gt 0) then print, yout[i]/1d5, xct
-     continue
-
-     for j = 0, ct - 1, 1 do begin
-;        if yout[i] lt min(y[ms[*,j]]) || $
-;           yout[i] gt max(y[ms[*,j]]) then continue
-        v = div_j[ms[0,j] : ms[1,j]]
-        x = y[ms[0,j] : ms[1,j]]
-        u = yout[i]
-        if n_elements(x) eq 1 then continue
-        if x[1] lt x[0] then begin
-           x = reverse(x)
-           v = reverse(v)
-        endif
-        if u lt x[0] || u gt x[n_elements(x)-1] then continue
-        result[i] += interpol(v, x, u)
-     endfor
+;     if (yout[i] / 1d5 lt 2.5 and yout[i]/1d5 gt 2) then print, yout[i]/1d5, xct
+  
   endfor
   return, result
 end
