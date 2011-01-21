@@ -18,8 +18,6 @@ function pdf_transform, p, y, yout
 
   ms = monseq(y, ct)
   dydx = abs(deriv(y))
-;  dydx = abs(y - shift(y, -1))
-;  dydx[0] = dydx[1] & dydx[n_elements(dydx)-1] = dydx[n_elements(dydx)-2]
   div_j = p  / dydx
 
   for i = 0, ny - 1, 1 do begin
