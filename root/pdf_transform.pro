@@ -20,15 +20,7 @@ function pdf_transform, p, y, yout
   dydx = abs(deriv(y))
   div_j = p  / dydx
 
-  for i = 0, ny - 1, 1 do begin
-
-     ;- sum up all the overlapping bins
-     ;- reproduces stella's ppv cube
-;     result[i] = total(p * (y ge yout[i] - (yout[1] - yout[0])/2  and $
-;                            y lt yout[i] + (yout[1] - yout[0])/2) )
-;     continue
-
-
+  for i = 0, ny - 2, 1 do begin
 
      ;- find crossing points
      cross = (y  - yout[i]) * (shift(y,-1) - yout[i]) lt 0

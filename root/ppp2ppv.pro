@@ -1,3 +1,41 @@
+;+
+; PURPOSE:
+;  This function generates a PPV cube from a PPP cube + velocity
+;  field.
+;
+; INPUTS:
+;  ppp: The ppp cube
+;  vel: The velocity field -- same size as ppp
+;  bincenters: A regularly-spaced grid of bin centers used to define
+;  the velocity spacing of the PPV cube. It also sets the pixel size
+;  of the output cube's third dimension.
+;
+; KEYWORD PARAMETERS:
+;  dimension: Set to an integer 1-3 to specify over which spatial
+;  dimension the cube is integrated. Defaults to 3
+;
+; OUTPUTS:
+;  A ppv cube. The velocity axis is always the third axis
+;
+; BEHAVIOR:
+;  The value of each PPP cell is assigned entirely to the nearest cell
+;  in the output cube (assuming it lies within the boundaries of that
+;  cube). Note that this will cause sampling/alias artifacts if the
+;  bincenters are more finely spaced than the typical pixel-to-pixel
+;  velocity jumps in the input cube.
+;  
+;  If the ppp cube dimensions are (nx, ny, nz) and the bincenters
+;  vector has nv elements, the dimensions of the output cube are as
+;  follows: 
+;
+;   dimension keyword value      output cube dimensions
+;            1                       (ny, nz, nv)
+;            2                       (nx, nz, nv)
+;            3 (default)             (nx, ny, nv)
+;
+; MODIFICATION HISTORY:
+;  Jan 21 2010: Written by Chris Beaumont
+;-
 function ppp2ppv, ppp, vel, bincenters, dimension = dimension
   compile_opt idl2
 
@@ -19,31 +57,80 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension
   if n_elements(vel) ne n_elements(ppp) then $
      message, 'ppp and vel must be the same size'
 
-
   binsize = bincenters - shift(bincenters, 1)
   binsize[0] = binsize[1]
-  if abs(range(binsize) / mean(binsize)) gt 1d-5 then $
+  if abs(range(binsize) / mean(binsize)) gt 1d-2 then $
      message, 'bincenters are not uniformly spaced'
   binsize = binsize[0]
 
   nbin = n_elements(bincenters)
   
   case dimension of
-     1: data = transpose(ppp, [1, 2, 0])
-     2: data = transpose(ppp, [0, 2, 1])
-     3: data = ppp
+     1: begin
+        data = transpose(ppp, [1, 2, 0])
+        velo = transpose(vel, [1, 2, 0])
+     end
+     2: begin
+        data = transpose(ppp, [0, 2, 1])
+        velo = transpose(vel, [0, 2, 1])
+     end
+     3: begin
+        data = ppp
+        velo = vel
+     end
   endcase
 
   sz = size(data)
   result = dblarr(sz[1], sz[2], nbin)
 
-  ind = floor((vel - (bincenters[0] - binsize/2.)) / binsize)
-  print, minmax(ind), minmax(vel), minmax(bincenters)
-  valid = (ind gt 0) and (ind lt n_elements(bincenters))
+  ind = floor((velo - (bincenters[0] - binsize/2.)) / binsize)
+  valid = (ind ge 0) and (ind lt n_elements(bincenters))
   data *= valid
+  
+  jump = abs(ind - shift(ind, 0, 0, 1))
+  jump[*,*,0] = 0
+  jump = fix(max(jump) + 1)
 
-  indices, reform(data[*,*,0]), x, y
-  for i = 0, sz[3] - 1 do $
-     result[x, y, ind[x, y, x*0 + i] ] += data[x, y, x*0 + i]
+  x = indgen(sz[1] * sz[2]) mod sz[1]
+  y = indgen(sz[1] * sz[2]) / sz[1]
+  for i = 0, sz[3] - 1 do begin
+     z = x * 0 + i
+     z1 = (i eq (sz[3] - 1)) ? z : z + 1
+     v = ind[x, y, z]
+     v1 = ind[x,y,z1]
+
+     jump = 3 * fix(max(abs(z1 - z)) + 1)
+     for j = 0, jump-1, 1 do begin
+        w = 1.0 * j / jump
+        val = data[x, y, z] * (1 - w) + data[x,y,z1] * w
+        vp = v * (1 - w) + v1 * w
+        w1 = vp - floor(vp)
+        result[x,y,floor(vp)] += val / float(jump) * (1 - w1)
+        result[x,y,floor(vp)+1] += val / float(jump) * (w1)
+     endfor
+  endfor
   return, result
+end
+
+
+pro test
+
+  data = fltarr(3, 3, 3) + 1
+  indices, data, x, y, z
+  xvel = 1. * x
+  bincenters = findgen(3)
+  ppv = ppp2ppv(data, xvel, bincenters)
+
+  answer = [ [ [3, 0, 0], [3, 0, 0], [3, 0, 0] ], $
+             [ [0, 3, 0], [0, 3, 0], [0, 3, 0] ], $
+             [ [0, 0, 3], [0, 0, 3], [0, 0, 3] ] ]
+  assert, min( abs(ppv - answer) lt 1e-5 )
+  
+  
+  ppv = ppp2ppv(data, xvel, bincenters, /dim)
+  assert, min( abs(ppv - replicate(1, 3, 3, 3)) lt 1e-5 )
+
+  ppv = ppp2ppv(data, xvel, bincenters, dim = 2)
+  assert, min( abs(ppv - answer) lt 1e-5 )
+  
 end
