@@ -94,13 +94,21 @@ function dg_iso::make_polygon, id, _extra = extra
   nanswap, cube, 0
   mask = bytarr(range[0], range[1], range[2])
   mask[x,y,z] = 1
-  lev = min((*ptr).height[id])
+  mask_0 = mask
+
+  lev = min((*ptr).t[ind], /nan)
+
+  ;- include neighboring, low-level emission
+  ;- will make the isosurface smoother
   mask or= (cube lt lev)
-  cube *= mask
+  bad = where(~mask, ct)
+  
+  if ct ne 0 then mask[bad] = lev / 10.
 
   ;-cube to surface
   if size(cube, /n_dim) ne 3 then return, obj_new()
-  isosurface, cube, lev, v, c
+;  isosurface, cube, lev, v, c
+  isosurface, mask_0, lev, v, c
 
   if size(v, /n_dim) ne 2 then return, obj_new()
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
@@ -150,14 +158,14 @@ end
 function dg_iso::event, event
   super = self->interwin::event(event)
   self->update_axes
-  if size(super, /tname) eq 'STRUCT' && self.listener ne 0 then $
+  if size(super, /tname) eq 'STRUCT' && self.listener gt 0 then $
      widget_control, self.listener, $
                      send_event = create_struct(super, name='DG_ISO_EVENT')
   
   return, 1
 end
 
-function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
+function dg_iso::init, ptr, color = color, alpha = alpha, title = title, listener = listener, $
                   _extra = extra
   junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
 
@@ -211,7 +219,7 @@ function dg_iso::init, ptr, color = color, alpha = alpha, listener = listener, $
                                 bgcolor=byte([20, 20, 20]), $
                                 xra = xra, yra = yra, zra = zra, $
                                 _extra = extra, /rotate, $
-                                title='Isosurfaces')
+                                title=keyword_set(title) ? title : 'Isosurfaces')
   self->set_rotation_center, sz[1:3]/2.
   return, 1
 end

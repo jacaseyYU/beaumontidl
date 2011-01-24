@@ -69,7 +69,8 @@ pro dendrogui_event, event
         dendrogui_sync_clients, sptr
      end
      'dib': begin
-        match = (*sptr).clients->get(/all, isa = 'dg_iso', count = ct)        
+        match = (*sptr).clients->get(/all, isa = 'dg_iso', count = ct)
+        for i = 0, ct - 1 do if obj_class(match[i]) ne 'DG_ISO' then ct--
         if ct eq 0 then begin
            di = obj_new('dg_iso', ptr, group_leader = tlb, $
                                 color = color, listen = tlb, xoffset = 200, $
@@ -116,7 +117,8 @@ pro dendrogui_keyboard_event, event, sptr
         cs = (*sptr).clients->get(/All, isa = 'dg_iso_dual', count = ct)
         if ct eq 0 then begin
            obj = obj_new('dg_iso_dual', (*sptr).ptr, *(*sptr).vel, *(*sptr).vgrid)
-           clients->add, obj
+           obj->run
+           (*sptr).clients->add, obj
         endif
         dendrogui_sync_clients, sptr, /iso
      end
@@ -212,6 +214,7 @@ pro dendrogui_sync_clients, sptr, iso = iso, force = force, pivot = pivot
 
   cs = (*sptr).clients->get(/all, count = ct)
   for i = 0, ct - 1, 1 do begin
+     if ~obj_valid(cs[i]) then continue
      doForce = keyword_set(force) || $
                (obj_isa(cs[i], 'dg_dendroplot') && keyword_set(pivot) ) || $
                (obj_isa(cs[i], 'dg_iso') && keyword_set(iso))
