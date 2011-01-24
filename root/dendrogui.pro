@@ -39,32 +39,43 @@ pro dendrogui_event, event
      'select': dendrogui_maskselect_event, event, sptr
      'color': dendrogui_color_event, event, sptr
      'ddb': begin
-        if obj_valid((*sptr).dd) then break
-        (*sptr).dd = obj_new('dg_dendroplot', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200, $
-                            alpha = alpha)
-        (*sptr).dd->run
+        match = (*sptr).clients->get(/all, isa = 'dg_dendroplot', count = ct)
+        if ct eq 1 then break
+        assert, ct eq 0
+        dd = obj_new('dg_dendroplot', ptr, group_leader = tlb, color = color, $
+                     listen = tlb, xoffset = 200, $
+                     alpha = alpha)
+        dd->run
+        (*sptr).clients->add, dd
         dendrogui_sync_clients, sptr
      end
      'dpb': begin
-        if obj_valid((*sptr).dp) then break
         if ~ptr_valid(data) then break
-        (*sptr).dp = obj_new('dg_interplot', ptr, *data, group_leader = tlb, color = color, $
+        dp = obj_new('dg_interplot', ptr, *data, group_leader = tlb, color = color, $
                              listen = tlb, xoffset = 200, alpha = alpha)
-        (*sptr).dp->run
+        dp->run
+        (*sptr).clients->add, dp
         dendrogui_sync_clients, sptr
      end
      'dsb': begin
-        if obj_valid((*sptr).ds) then break
-        (*sptr).ds = obj_new('dg_slice', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200, $
-                            alpha = alpha)
-        (*sptr).ds->run
+        match = (*sptr).clients->get(/all, isa = 'dg_slice', count = ct)
+        if ct eq 1 then break
+        assert, ct eq 0
+        ds = obj_new('dg_slice', ptr, group_leader = tlb, color = color, $
+                     listen = tlb, xoffset = 200, $
+                     alpha = alpha)
+        ds->run
+        (*sptr).clients->add, ds
         dendrogui_sync_clients, sptr
      end
      'dib': begin
-        if ~obj_valid((*sptr).di) then begin
-           (*sptr).di = obj_new('dg_iso', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200, $
-                               alpha = alpha)
-           (*sptr).di->run
+        match = (*sptr).clients->get(/all, isa = 'dg_iso', count = ct)        
+        if ct eq 0 then begin
+           di = obj_new('dg_iso', ptr, group_leader = tlb, $
+                                color = color, listen = tlb, xoffset = 200, $
+                                alpha = alpha)
+           di->run
+           (*sptr).clients->add, di
         endif
         dendrogui_sync_clients, sptr, /force, /iso
      end
@@ -75,7 +86,7 @@ end
 pro dendrogui_cleanup, tlb
   widget_control, tlb, get_uvalue = sptr
   ptr_free, (*sptr).data, (*sptr).substructs
-  obj_destroy, [(*sptr).dd, (*sptr).dp, (*sptr).ds, (*sptr).di]
+  obj_destroy, (*sptr).clients
   ptr_free, sptr
 end
 
@@ -100,6 +111,16 @@ pro dendrogui_keyboard_event, event, sptr
         dendrogui_sync_clients, sptr, /pivot
      end
      'L': dendrogui_set_substruct, get_leaves((*(*sptr).ptr).clusters), sptr
+     'D' : begin
+        if ~(*sptr).haveDual then break
+        cs = (*sptr).clients->get(/All, isa = 'dg_iso_dual', count = ct)
+        if ct eq 0 then begin
+           obj = obj_new('dg_iso_dual', (*sptr).ptr, *(*sptr).vel, *(*sptr).vgrid)
+           clients->add, obj
+        endif
+        dendrogui_sync_clients, sptr, /iso
+     end
+        
      else:
   endcase
   LEFT = 5 & RIGHT = 6 & DOWN = 8
@@ -181,28 +202,24 @@ pro dendrogui_set_id, id, sptr
   widget_control, (*sptr).selects[(*sptr).index], set_value = (*sptr).uncheck_bmp
   widget_control, (*sptr).selects[id], set_value = (*sptr).check_bmp
   (*sptr).index = id
-  if obj_valid((*sptr).dp) then (*sptr).dp->set_current, id
-  if obj_valid((*sptr).dd) then (*sptr).dd->set_current, id
-  if obj_valid((*sptr).di) then (*sptr).di->set_current, id
-  if obj_valid((*sptr).ds) then (*sptr).ds->set_current, id
+  
+  cs = (*sptr).clients->get(/all, count = ct)
+  for i = 0, ct - 1, 1 do cs[i]->set_current, id
 end
 
 pro dendrogui_sync_clients, sptr, iso = iso, force = force, pivot = pivot
   if keyword_set(iso) then widget_control, /hourglass
 
-  if keyword_set(pivot) && obj_valid((*sptr).dd) then $
-     (*sptr).dd->redraw_baseplot
-
-  for i = 0, 7, 1 do begin
-     if obj_valid((*sptr).dp) then $
-        (*sptr).dp->set_substruct, i, *(*sptr).substructs[i], force = force
-     if obj_valid((*sptr).ds) then $
-        (*sptr).ds->set_substruct, i, *(*sptr).substructs[i], force = force
-     if obj_valid((*sptr).di) && keyword_set(iso) then $
-        (*sptr).di->set_substruct, i, *(*sptr).substructs[i], force = force
-     if obj_valid((*sptr).dd) then $
-        (*sptr).dd->set_substruct, i, *(*sptr).substructs[i], $
-        force = keyword_set(pivot) || keyword_set(force)
+  cs = (*sptr).clients->get(/all, count = ct)
+  for i = 0, ct - 1, 1 do begin
+     doForce = keyword_set(force) || $
+               (obj_isa(cs[i], 'dg_dendroplot') && keyword_set(pivot) ) || $
+               (obj_isa(cs[i], 'dg_iso') && keyword_set(iso))
+     for j = 0, 7, 1 do begin
+        cs[i]->set_substruct, j, *(*sptr).substructs[j], force = doForce
+     endfor
+     if (obj_isa(cs[i], 'dg_dendroplot') && keyword_set(pivot)) then $
+        cs[i]->redraw_baseplot
   endfor
 end
 
@@ -234,16 +251,15 @@ pro dendrogui_color_event, event, sptr
   widget_control, (*sptr).colors[i], $
                   set_value = rebin(reform(byte(new[0:2]), 1,1,3), 20, 20, 3)
                                                    
-  if obj_valid((*sptr).dd) then (*sptr).dd->set_color, i, new[0:2], alpha = new[3]
-  if obj_valid((*sptr).dp) then (*sptr).dp->set_color, i, new[0:2], alpha = new[3]
-  if obj_valid((*sptr).ds) then (*sptr).ds->set_color, i, new[0:2], alpha = new[3]
-  if obj_valid((*sptr).di) then (*sptr).di->set_color, i, new[0:2], alpha = new[3]
+  cs = (*sptr).clients->get(/all, count = ct)
+  for j = 0, ct - 1, 1 do $
+     cs[j]->set_color, i, new[0:2], alpha = new[3]
   dendrogui_sync_clients, sptr, /force
 
 end
 
 
-pro dendrogui, ptr, data = data
+pro dendrogui, ptr, data = data, vel = vel, vgrid = vgrid
 
 ;  restore, '~/dendro/ex_ptr_small.sav'
   if n_elements(ptr) eq 0 then begin
@@ -292,21 +308,36 @@ pro dendrogui, ptr, data = data
 
   ;- initialize viz guis
   dd = obj_new('dg_dendroplot', ptr, group_leader = tlb, color = color, listen = tlb, xoffset = 200)
-  dp = obj_new() & ds = obj_new() & di = obj_new()
   
   dd->run
 
-
+  clients = obj_new('idl_container')
+  clients->add, dd
+  
+  if keyword_set(vel) then begin
+     if ~keyword_set(vgrid) then $
+        message, 'vgrid must be provided if vel is'
+     have_Dual = 1
+     state_vel = ptr_new(vel)
+     state_vgrid = ptr_new(vgrid)
+  endif else begin
+     state_vel = ptr_new()
+     state_vgrid = ptr_new()
+     have_Dual = 0
+  endelse
+     
   substructs = ptrarr(8)
   alpha = replicate(.7, 8)
   for i = 0, 7 do substructs[i] = ptr_new(-10)
   state={rows:rows, selects:selects, colors:colors, $
          index:0, uncheck_bmp:check, check_bmp:red_check, $
-         dd:dd, dp:dp, ds:ds, di:di, substructs:substructs, ptr:ptr, $
+         clients: clients, $
+         substructs:substructs, ptr:ptr, $
          dosingle:0, $
          data:n_elements(data) ne 0 ? ptr_new(data) : ptr_new(), $
          color:color, alpha:alpha, $
-         listen:1, old_listen:0, drag:0}
+         listen:1, old_listen:0, drag:0, $
+         vel: state_vel, vgrid:state_vgrid, haveDual : have_Dual}
   sptr = ptr_new(state, /no_copy)
   widget_control, tlb, set_uvalue = sptr
   widget_control, tlb, /realize
