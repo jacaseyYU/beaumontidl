@@ -90,25 +90,18 @@ function dg_iso::make_polygon, id, _extra = extra
   ;- correct in the future.
   if min(range) le 1 then return, obj_new()
   cube = fltarr(range[0], range[1], range[2])
-  cube[(*ptr).x - lo[0], (*ptr).y - lo[1], (*ptr).v - lo[2]] = (*ptr).t
+  cube[x,y,z] = (*ptr).t[ind]
   nanswap, cube, 0
-  mask = bytarr(range[0], range[1], range[2])
-  mask[x,y,z] = 1
-  mask_0 = mask
 
-  lev = min((*ptr).t[ind], /nan)
-
-  ;- include neighboring, low-level emission
-  ;- will make the isosurface smoother
-  mask or= (cube lt lev)
-  bad = where(~mask, ct)
-  
-  if ct ne 0 then mask[bad] = lev / 10.
+  r = floor(randomu(seed, 1000) * n_elements(ind))
+  r = (*ptr).t[ind[r]]
+  r = r[sort(r)]
+  widget_control, self.slider, get_value = lev
+  lev = r[0 > (lev * n_elements(r)) < (n_elements(r)-1)]
 
   ;-cube to surface
   if size(cube, /n_dim) ne 3 then return, obj_new()
-;  isosurface, cube, lev, v, c
-  isosurface, mask_0, lev, v, c
+  isosurface, cube, lev, v, c
 
   if size(v, /n_dim) ne 2 then return, obj_new()
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
@@ -161,12 +154,17 @@ function dg_iso::event, event
   if size(super, /tname) eq 'STRUCT' && self.listener gt 0 then $
      widget_control, self.listener, $
                      send_event = create_struct(super, name='DG_ISO_EVENT')
-  
+  if (event.id eq self.slider) && self.listener gt 0 then $
+     widget_control, self.listener, $
+                     send_event = create_struct(event, name='DG_ISO_SLIDER_EVENT')
+     
   return, 1
 end
 
-function dg_iso::init, ptr, color = color, alpha = alpha, title = title, listener = listener, $
-                  _extra = extra
+function dg_iso::init, ptr, color = color, alpha = alpha, $
+                       title = title, listener = listener, $
+                       _extra = extra
+
   junk = self->dg_client::init(ptr, listener, color = color, alpha = alpha)
 
   sz = (*ptr).sz
@@ -221,6 +219,8 @@ function dg_iso::init, ptr, color = color, alpha = alpha, title = title, listene
                                 _extra = extra, /rotate, $
                                 title=keyword_set(title) ? title : 'Isosurfaces')
   self->set_rotation_center, sz[1:3]/2.
+  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.5)
+
   return, 1
 end
 
@@ -243,7 +243,8 @@ pro dg_iso__define
           axes:objarr(12), $
           xcen:0., ycen:0., zcen:0., $
           merged:obj_new(), is_merged:0B, $
-          scale:[1., 1., 1.]}
+          scale:[1., 1., 1.], $
+          slider:0L}
 end
 
 

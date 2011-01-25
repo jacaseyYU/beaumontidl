@@ -1,11 +1,3 @@
-function dg_iso_dual::event, event
-  super = self->dg_iso::event(event)
-  if (event.id eq self.slider) && self.listener gt 0 then begin
-     widget_control, self.listener, send_event = create_struct(event, name='DG_ISO_DUAL_EVENT')
-  endif
-  return, 1
-end
-     
 function dg_iso_dual::make_polygon, id, _extra = extra
   if min(id) lt 0 then return, obj_new()
 
@@ -60,8 +52,6 @@ function dg_iso_dual::init, ptr, vel, vgrid, no_copy = no_copy, _extra = extra
   
   self.vel = ptr_new(vel, no_copy = keyword_set(no_copy))
   self.vgrid = ptr_new(vgrid, no_copy = keyword_set(no_copy))
-  lo = min((*ptr).t, max = hi, /nan)
-  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.5)
 
   return, 1
 end
@@ -75,7 +65,6 @@ end
 pro dg_iso_dual__define
   data = {dg_iso_dual, $
           inherits dg_iso, $
-          slider:0L, $
           vel : ptr_new(), $
           vgrid : ptr_new() }
 end
