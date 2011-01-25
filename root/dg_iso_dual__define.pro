@@ -1,3 +1,11 @@
+function dg_iso_dual::event, event
+  super = self->dg_iso::event(event)
+  if (event.id eq self.slider) && self.listener gt 0 then begin
+     widget_control, self.listener, send_event = create_struct(event, name='DG_ISO_DUAL_EVENT')
+  endif
+  return, 1
+end
+     
 function dg_iso_dual::make_polygon, id, _extra = extra
   if min(id) lt 0 then return, obj_new()
 
@@ -19,15 +27,19 @@ function dg_iso_dual::make_polygon, id, _extra = extra
   cube = fltarr(range[0], range[1], range[2])
   v = cube
   
-  cube[(*ptr).x - lo[0], (*ptr).y - lo[1], (*ptr).v - lo[2]] = (*ptr).t
+  cube[x, y, z] = (*ptr).t[ind]
   nanswap, cube, 0
 
-  v[(*ptr).x - lo[0], (*ptr).y - lo[1], (*ptr).v - lo[2]] = (*self.vel)[(*ptr).cubeindex]
+  v[x, y, z] = (*self.vel)[ci]
   ppv = ppp2ppv(cube, v, *self.vgrid)
 
   widget_control, self.slider, get_value = lev
-  print, lev, minmax(ppv)
+  hit = where(ppv ne 0, ct)
+  if ct eq 0 then return, obj_new()
+  hit = ppv[hit]
+  lev = (hit[sort(hit)])[0 > (lev * n_elements(hit) - 1)]
   isosurface, ppv, lev, v, c
+  print, lev, minmax(ppv)
 
   if size(v, /n_dim) ne 2 then return, obj_new()
   v[0,*] += lo[0] & v[1,*] += lo[1] 
@@ -49,7 +61,7 @@ function dg_iso_dual::init, ptr, vel, vgrid, no_copy = no_copy, _extra = extra
   self.vel = ptr_new(vel, no_copy = keyword_set(no_copy))
   self.vgrid = ptr_new(vgrid, no_copy = keyword_set(no_copy))
   lo = min((*ptr).t, max = hi, /nan)
-  self.slider = cw_fslider(self.base, min = lo, max = hi, value = (lo + hi) / 2.)
+  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.5)
 
   return, 1
 end
