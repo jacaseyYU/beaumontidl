@@ -24,7 +24,7 @@ pro dendrogui_event, event
      
      if kbrd_ev then dendrogui_keyboard_event, event, sptr
 
-     doIso = (type eq 'DG_ISO_DUAL_EVENT')
+     doIso = (type eq 'DG_ISO_SLIDER_EVENT')
      
      dendrogui_sync_clients, sptr, iso = doIso
      return
@@ -117,7 +117,7 @@ pro dendrogui_keyboard_event, event, sptr
         if ~(*sptr).haveDual then break
         cs = (*sptr).clients->get(/All, isa = 'dg_iso_dual', count = ct)
         if ct eq 0 then begin
-           obj = obj_new('dg_iso_dual', (*sptr).ptr, *(*sptr).vel, *(*sptr).vgrid, group_leader = (*sptr).tlb, listen = (*sptr).tlb)
+           obj = obj_new('dg_iso_dual', (*sptr).ptr, *(*sptr).vel, *(*sptr).vgrid, group_leader = (*sptr).tlb, listen = (*sptr).tlb, color = (*sptr).color)
            obj->run
            (*sptr).clients->add, obj
         endif
