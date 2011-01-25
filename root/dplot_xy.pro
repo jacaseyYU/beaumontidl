@@ -3,8 +3,7 @@ pro recursive_plot, id, xs, ys, clusters, height, xloc
   partner = merger_partner(id, clusters, merge=m)
   isLeaf = id lt nleaf
   hi = height[id]
-  lo = partner eq -1 ? min(height) - .05 * range(height) : height[m]
-  
+  lo = partner eq -1 ? height[id] : height[m]
 
   if isLeaf then begin
      xs->push, [xloc[id], xloc[id]]
@@ -43,7 +42,7 @@ function dplot_xy, ptr, id, norm = norm
 
   xs = obj_new('stack') & ys = obj_new('stack')
   partner = merger_partner(start, clusters, merge = m)
-  lo = partner eq -1 ? height[0]*0 : height[m]
+  lo = partner eq -1 ? height[start] : height[m]
 
   xs->push, xloc[start] & ys->push, lo
   recursive_plot, start, xs, ys, clusters, height, xloc

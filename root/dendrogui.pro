@@ -6,7 +6,6 @@ pro dendrogui_event, event
   ;- handle events generated from clients
   client = strmatch(type, 'DG_*')
   if client then begin
-
      ;- dendroplot, slice events are 
      ;- ignored when click-dragging
      if type eq 'DG_DENDROPLOT_EVENT' || $
@@ -24,8 +23,10 @@ pro dendrogui_event, event
         dendrogui_substruct_event, event, sptr
      
      if kbrd_ev then dendrogui_keyboard_event, event, sptr
+
+     doIso = (type eq 'DG_ISO_DUAL_EVENT')
      
-     dendrogui_sync_clients, sptr
+     dendrogui_sync_clients, sptr, iso = doIso
      return
   endif
   
@@ -116,7 +117,7 @@ pro dendrogui_keyboard_event, event, sptr
         if ~(*sptr).haveDual then break
         cs = (*sptr).clients->get(/All, isa = 'dg_iso_dual', count = ct)
         if ct eq 0 then begin
-           obj = obj_new('dg_iso_dual', (*sptr).ptr, *(*sptr).vel, *(*sptr).vgrid)
+           obj = obj_new('dg_iso_dual', (*sptr).ptr, *(*sptr).vel, *(*sptr).vgrid, group_leader = (*sptr).tlb, listen = (*sptr).tlb)
            obj->run
            (*sptr).clients->add, obj
         endif
@@ -206,7 +207,10 @@ pro dendrogui_set_id, id, sptr
   (*sptr).index = id
   
   cs = (*sptr).clients->get(/all, count = ct)
-  for i = 0, ct - 1, 1 do cs[i]->set_current, id
+  for i = 0, ct - 1, 1 do begin
+     if ~obj_valid(cs[i]) then continue
+     cs[i]->set_current, id
+  endfor
 end
 
 pro dendrogui_sync_clients, sptr, iso = iso, force = force, pivot = pivot
@@ -255,8 +259,10 @@ pro dendrogui_color_event, event, sptr
                   set_value = rebin(reform(byte(new[0:2]), 1,1,3), 20, 20, 3)
                                                    
   cs = (*sptr).clients->get(/all, count = ct)
-  for j = 0, ct - 1, 1 do $
+  for j = 0, ct - 1, 1 do begin
+     if ~obj_valid(cs[j]) then continue
      cs[j]->set_color, i, new[0:2], alpha = new[3]
+  endfor
   dendrogui_sync_clients, sptr, /force
 
 end
@@ -340,7 +346,8 @@ pro dendrogui, ptr, data = data, vel = vel, vgrid = vgrid
          data:n_elements(data) ne 0 ? ptr_new(data) : ptr_new(), $
          color:color, alpha:alpha, $
          listen:1, old_listen:0, drag:0, $
-         vel: state_vel, vgrid:state_vgrid, haveDual : have_Dual}
+         vel: state_vel, vgrid:state_vgrid, haveDual : have_Dual, $
+         tlb:tlb}
   sptr = ptr_new(state, /no_copy)
   widget_control, tlb, set_uvalue = sptr
   widget_control, tlb, /realize
