@@ -16,6 +16,12 @@
 ;  A string array. Each element of the output consists of the
 ;  characters found between an occurance of FIRST and LAST in the
 ;  input string.
+;
+; MODIFICATION HISTORY:
+;  2010: Written by Chris Beaumont
+;  Jan 2011: Fixed bug that incorrectly located end of parse
+;            sequence. cnb.
+;-
 function parsebetween, string, first, last
   
   skip = strlen(first)
@@ -30,7 +36,7 @@ function parsebetween, string, first, last
   result = obj_new('stack')
   
   while hit2 ne -1 do begin
-     result->push, strmid(string, hit + skip, (hit2 - hit - len+1))
+     result->push, strmid(string, hit + skip, (hit2 - hit - skip))
      hit = strpos(string, first, hit2)
      if hit eq -1 then break
      hit2 = strpos(string, last, hit+1)
