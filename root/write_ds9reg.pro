@@ -44,10 +44,10 @@ pro write_ds9reg, file, regions, system
                               rec.angle, $
                               format='("ellipse(",2(f0.5,","),2(f0.5,a,","),f0.5,")#")')
         'BOX': $
-           output[i] = string(rec, rec.y, $
+           output[i] = string(rec.x, rec.y, $
                               rec.width, symbol, rec.height, symbol, $
                               rec.angle, $
-                              format='("ellipse(",2(f0.5,","),2(f0.5,a,","),f0.5,")#")')
+                              format='("box(",2(f0.5,","),2(f0.5,a,","),f0.5,")#")')
         else: begin
            message, /con, 'shape parameter '+rec.shape+$
                     ' not supported by write_ds9reg. Aborting'
