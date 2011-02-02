@@ -3,7 +3,7 @@ pro dendroviz_listener::event, event
      contains_tag(event, 'RELEASE') && $
      (event.type eq 5 || event.type eq 6) && event.release
 
-  if kbrd_ev then self->keyboardEvent
+  if kbrd_ev then self->keyboardEvent, event
   
 end
 
@@ -12,7 +12,7 @@ pro dendroviz_listener::keyboardEvent, event
 
   ;- ascii-key press
   if event.type eq 5 then begin
-     case strupcase(event.ch) of:
+     case strupcase(event.ch) of
         '1': self.hub->setCurrentID, 0
         '2': self.hub->setCurrentID, 1
         '3': self.hub->setCurrentID, 2
@@ -21,8 +21,8 @@ pro dendroviz_listener::keyboardEvent, event
         '6': self.hub->setCurrentID, 5
         '7': self.hub->setCurrentID, 6
         '8': self.hub->setCurrentID, 7
-        'X': self.hub->setCurrentStructure( -2 )
-        'L': self.hub->setCurrentStructure( get_leaves((*ptr).clusters) )
+        'X': self.hub->setCurrentStructure, -2 
+        'L': self.hub->setCurrentStructure, get_leaves((*ptr).clusters) 
         else:
      endcase
      return

@@ -66,6 +66,12 @@ function cnbgrmask::init, mask, $
   self->redraw
   return, 1
 end
+
+pro cnbgrmask::set_color, index, color
+  c = self.colors
+  c[*, index] = c
+  self->set_colors, c
+end
   
 pro cnbgrmask::set_colors, colors
   if ptr_valid(self.colors) && $

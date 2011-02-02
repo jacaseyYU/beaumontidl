@@ -13,12 +13,12 @@ function cloudviz_listener::init, hub
      message, 'hub is not a valid cloudviz_hub object'
 
   self.hub = hub
-  return, 2
+  return, 1
 end
 
 
 pro cloudviz_listener__define
   data = {cloudviz_listener, $
-          hub:hub() $
+          hub:obj_new() $
          }
 end
