@@ -1,17 +1,24 @@
 function dendroplot::event, event
   super = self->interwin::event(event)
-
   ;- if interwin didn't relay any events, 
   ;- there's nothing to do
   if size(super, /tname) ne 'STRUCT' then return, 0
+  self.hub->receiveEvent, super
 
+  if ~self.listener_toggle->check_listen(super) then return, 0
+
+  if ~contains_tag(super, 'TYPE') || $
+     (super.type ne 2) then return, 0
+  
   x = super.x & y = super.y
   ptr = self.hub->getData()
   substruct = pick_branch(x, y, (*ptr).xlocation, $
                           (*ptr).height, (*ptr).clusters)
 
   self.hub->setCurrentStructure, leafward_mergers(substruct, (*ptr).clusters)
+
   self->update_info, string(substruct, format='("ID: ", i0)')
+
 end
 
 pro dendroplot::redraw_baseplot
@@ -58,6 +65,10 @@ pro dendroplot::notifyColor, index, color
   self->request_redraw
 end
 
+pro dendroplot::notifyCurrent, id
+  self.listener_toggle->set_listen, 0
+end
+
 pro dendroplot::update_info, text
   if strmid(text, 0, 2) ne 'ID' then return
   widget_control, self.label, set_value = text
@@ -92,6 +103,8 @@ function dendroplot::init, hub, _extra = extra
   model->add, self.baseplot
   model->add, axis
 
+  self.listener_toggle = obj_new('listener_toggle')
+
   return, self->interwin::init(model, _extra = extra, title='Dendrogram')
 
 end
@@ -104,7 +117,7 @@ end
 pro dendroplot::cleanup
   self->interwin::cleanup
   self->dendroviz_client::cleanup
-  obj_destroy, [self.baseplot, self.plots]
+  obj_destroy, [self.baseplot, self.plots, self.listener_toggle]
 end
 
 pro dendroplot__define
@@ -113,6 +126,7 @@ pro dendroplot__define
           inherits interwin, $
           baseplot:obj_new(), $
           plots:objarr(8), $
-          norm:0B $
+          norm:0B, $
+          listener_toggle:obj_new() $
          }
 end

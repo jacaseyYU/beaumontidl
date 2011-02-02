@@ -19,8 +19,10 @@ pro dg
   hub = obj_new('cloudviz_hub', ptr)
   panel = obj_new('cloudviz_panel', hub)
   plot = obj_new('dendroplot', hub)
+  listen = obj_new('dendroviz_listener', hub)
   hub->add, panel
   hub->add, plot
+  hub->addListener, listen
   return
   
   if ~contains_tag(*ptr, 'CLUSTER_LABEL_H') then begin

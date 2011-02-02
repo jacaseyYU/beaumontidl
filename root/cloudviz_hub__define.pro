@@ -1,15 +1,15 @@
-pro cloudiz_hub::receiveEvent, event, _extra = extra
+pro cloudviz_hub::receiveEvent, event, _extra = extra
   if obj_valid(self.listener) then $
      self.listener->event, event
 end
 
 function cloudviz_hub::getListener
-  return self.listener
+  return, self.listener
 end
 
 pro cloudviz_hub::addListener, listener
   if ~obj_valid(listener) || ~obj_isa(listener, 'cloudviz_listener') then $
-     message, 'listener is not a valid cloudU_listener object'
+     message, 'listener is not a valid cloud_listener object'
   self.listener = listener
 end
 
@@ -77,8 +77,8 @@ function cloudviz_hub::getStructure, index
   return, ptr_valid(self.structure_ids[index]) ? *self.structure_ids[index] : -1
 end
 
-function cloudviz_hub::getCurrentSTructure
-  return, getStructure(self.currentID)
+function cloudviz_hub::getCurrentStructure
+  return, self->getStructure(self.currentID)
 end
 
 function cloudviz_hub::getData
@@ -120,7 +120,7 @@ end
 pro cloudviz_hub__define
   data = {cloudviz_hub, $
           inherits IDL_CONTAINER, $
-          event_listener:obj_new(), $
+          listener:obj_new(), $
           gui: obj_new(), $
           data: ptr_new(), $
           colors: bytarr(4, 8), $
