@@ -23,6 +23,7 @@ pro dendroviz_listener::keyboardEvent, event
         '8': self.hub->setCurrentID, 7
         'X': self.hub->setCurrentStructure, -2 
         'L': self.hub->setCurrentStructure, get_leaves((*ptr).clusters) 
+        'F': self.hub->forceUpdate
         else:
      endcase
      return

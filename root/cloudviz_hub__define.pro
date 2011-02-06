@@ -85,6 +85,18 @@ function cloudviz_hub::getData
   return, self.data
 end
 
+pro cloudviz_hub::forceUpdate
+  
+  clients = self->IDL_CONTAINER::get(/all, count = ct)
+  for i = 0, ct - 1, 1 do begin
+     if ~obj_valid(clients[i]) then continue
+     for j = 0, 7, 1 do begin
+        clients[i]->notifyStructure, j, self->getStructure(j), /force
+     endfor
+  endfor
+end
+
+     
 function cloudviz_hub::init, ptr, colors = colors
 
   if size(ptr, /type) ne 10 || ~ptr_valid(ptr) || $
