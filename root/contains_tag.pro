@@ -5,9 +5,10 @@ function contains_tag, struct, tag
      return,!values.f_nan
   endif
 
-  if n_elements(struct) ne 1 || $
-     size(struct, /tname) ne 'STRUCT' then $
-        message, 'argument must be a scalar struct'
+  if n_elements(struct) ne 1 then $
+     message, 'argument must be a scalar'
+
+  if size(struct, /type) ne 8 then return, 0
 
   names = tag_names(struct)
   hit = where(strmatch(names, tag, /fold), ct)

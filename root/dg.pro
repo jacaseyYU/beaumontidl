@@ -19,9 +19,13 @@ pro dg
   hub = obj_new('cloudviz_hub', ptr)
   panel = obj_new('cloudviz_panel', hub)
   plot = obj_new('dendroplot', hub)
+  slice = obj_new('cloudslice', hub)
   listen = obj_new('dendroviz_listener', hub)
+  iso = obj_new('cloudiso', hub)
   hub->add, panel
+  hub->add, iso
   hub->add, plot
+;  hub->add, slice
   hub->addListener, listen
   return
   

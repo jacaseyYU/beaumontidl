@@ -68,8 +68,9 @@ function cnbgrmask::init, mask, $
 end
 
 pro cnbgrmask::set_color, index, color
-  c = self.colors
-  c[*, index] = c
+  assert, ptr_valid(self.colors)
+  c = *self.colors
+  c[*, index] = color
   self->set_colors, c
 end
   

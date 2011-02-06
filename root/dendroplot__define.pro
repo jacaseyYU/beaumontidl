@@ -110,7 +110,6 @@ function dendroplot::init, hub, _extra = extra
 end
 
 pro dendroplot::run
-  print, 'running dendroplot'
   self->interwin::run
 end
 
