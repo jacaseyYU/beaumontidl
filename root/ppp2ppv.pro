@@ -87,10 +87,6 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension
   valid = (ind ge 0) and (ind lt n_elements(bincenters))
   data *= valid
   
-  jump = abs(ind - shift(ind, 0, 0, 1))
-  jump[*,*,0] = 0
-  jump = fix(max(jump) + 1)
-
   x = indgen(sz[1] * sz[2]) mod sz[1]
   y = indgen(sz[1] * sz[2]) / sz[1]
   for i = 0, sz[3] - 1 do begin
@@ -99,14 +95,12 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension
      v = ind[x, y, z]
      v1 = ind[x,y,z1]
 
-     jump = 3 * fix(max(abs(z1 - z)) + 1)
+     jump = 3 * fix(max(abs(v1 - v)) + 1)
      for j = 0, jump-1, 1 do begin
         w = 1.0 * j / jump
         val = data[x, y, z] * (1 - w) + data[x,y,z1] * w
         vp = v * (1 - w) + v1 * w
-        w1 = vp - floor(vp)
-        result[x,y,floor(vp)] += val / float(jump) * (1 - w1)
-        result[x,y,floor(vp)+1] += val / float(jump) * (w1)
+        result[x,y,floor(vp)] += val / float(jump)
      endfor
   endfor
   return, result

@@ -3,7 +3,7 @@ function ppv2ppp_mask, ppv, vel, bincenters
   
   if n_params() ne 3 then begin
      print, 'Calling sequence:'
-     print, 'result = ppv2ppp_mask(ppp, vel, bincenters)'
+     print, 'result = ppv2ppp_mask(ppv, vel, bincenters)'
      return, !values.f_nan
   endif
 
@@ -15,7 +15,7 @@ function ppv2ppp_mask, ppv, vel, bincenters
   if sv[0] ne 3 then $
      message, 'vel must be a data cube'
 
-  if sz[3] ne sv[dimension] then $
+  if sz[3] ne sv[3] then $
      message, 'ppv cube and velocity field have incompatible sizes'
 
   if n_elements(bincenters) ne sz[3] then $
@@ -30,7 +30,31 @@ function ppv2ppp_mask, ppv, vel, bincenters
   nbin = n_elements(bincenters)
 
   indices, vel, x, y, z
-  v = (vel - bincenters[0]) / (binsize[0])
+  v = round((vel - bincenters[0]) / (binsize))
   
-  return, (ppv[x, y, v] ne 0) and (v ge 0) and (v le sz[2])
+  return, (ppv[x, y, v < (sz[3] - 1)] ne 0) and (v ge 0) and (v lt sz[3])
+end
+
+
+pro test
+  ppv = bytarr(2, 2, 100)
+  ppv[*,*, 20:40] = 1
+  indices, ppv, x, y, z
+  vel = float(z)
+
+  !p.multi = [0,1,2]
+  v = indgen(100) / 2.
+  ppp = ppv2ppp_mask(ppv, vel, v)
+  plot, ppp[1,1,*], yra = [0, 1.5]
+  oplot, vel[1,1,*] gt v[20] and vel[1,1,*] lt v[40], $
+         color = fsc_color('red'), line = 2
+
+  vel = sin(z / 10.) * 30
+  ppp = ppv2ppp_mask(ppv, vel, v)
+  plot, ppp[1,1,*], yra = [0, 1.5], psym = -4
+  oplot, vel[1,1,*] gt v[20] and vel[1,1,*] lt v[40], $
+         color = fsc_color('red'), line = 2
+
+
+  !p.multi = 0
 end
