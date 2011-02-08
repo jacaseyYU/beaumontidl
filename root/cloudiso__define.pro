@@ -57,7 +57,7 @@ pro cloudiso::recalculateIso, index, structure
   v[0,*] += lo[0] & v[1,*] += lo[1] & v[2,*] += lo[2]
 
   color = self.hub->getColors(index)
-  alpha = color[3]
+  alpha = color[3] / 255.
   color = color[0:2]
   o = obj_new('idlgrpolygon', v, poly = c, color = color, alpha = alpha)
   self.sub_isos[index] = o

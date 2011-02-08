@@ -44,7 +44,8 @@ pro cloudviz_hub::setCurrentStructure, structure, force = force
 end
 
 pro cloudviz_hub::cleanup
-  ptr_free, [self.pixelLabels, self.clusters, self.structure_ids]
+  ptr_free, [self.data, self.structure_ids]
+  obj_destroy, [self.listener, self.gui]
 end
 
 function cloudviz_hub::getColors, index

@@ -131,7 +131,6 @@ pro test
   print, sph
   tvimage, bytscl(total(m,3)), /noint  
 
-
   print, div
   print, 'Oblate ellipse along y axis'
   a = 10. & b = 4. & c = 10.
