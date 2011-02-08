@@ -25,7 +25,7 @@ pro dg
   hub->add, panel
   hub->add, iso
   hub->add, plot
-;  hub->add, slice
+  hub->add, slice
   hub->addListener, listen
   return
   
