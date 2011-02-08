@@ -15,9 +15,6 @@ function ppv2ppp_mask, ppv, vel, bincenters
   if sv[0] ne 3 then $
      message, 'vel must be a data cube'
 
-  if sz[3] ne sv[3] then $
-     message, 'ppv cube and velocity field have incompatible sizes'
-
   if n_elements(bincenters) ne sz[3] then $
      message, 'bincenters has an incorrect number of elements'
 
