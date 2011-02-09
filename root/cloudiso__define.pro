@@ -37,7 +37,7 @@ pro cloudiso::recalculateIso, index, structure
   assert, n_elements(lo) eq 3
   range = hi - lo
   xyz[0,*] -= lo[0] & xyz[1,*] -= lo[1] & xyz[2,*] -= lo[2]
-  cube = fltarr(range[0], range[1], range[2])
+  cube = fltarr(range[0] > 2, range[1] > 2, range[2] > 2)
   cube[ xyz[0,*], xyz[1,*], xyz[2,*] ] = (*ptr).value[ind]
   nanswap, cube, 0
 
