@@ -1,3 +1,7 @@
+pro cloudiso_deprojector::notifyCurrent, id
+  ;- override superclass method, which adjusts the slider that we've removed
+end
+
 pro cloudiso_deprojector::recalculateiso, index, structure
 
   obj_destroy, self.sub_isos[index]
@@ -9,17 +13,23 @@ pro cloudiso_deprojector::recalculateiso, index, structure
   ;- create a cube
   mask = byte((*ptr).cluster_label) * 0B
   mask[ind] = 1B
+  
+  print, 'range of ppv v values: ', minmax( (array_indices(mask, ind))[2,*])
 
   deproject = self.projectForwards ? $
               ppp2ppv_mask(mask, *self.vel, *self.vcen) : $
               ppv2ppp_mask(mask, *self.vel, *self.vcen)
-  
+  print, 'minmax of velocity field', minmax((*self.vel))
+  print, 'minmax of velocity bins', minmax(*self.vcen)
   isosurface, deproject, 1, v, c
+
+  print, 'range of deprojected z vals:  ', minmax(v[2,*])
+  print, 'size of z axis:  ', n_elements(deproject[0,0,*])
   color = self.hub->getColors(index)
-  alpha = color[3]
+  alpha = color[3] / 255.
   color = color[0:2]
 
-  o = obj_new('idlgrpolygon', v, poly = c, color = color, alpha = alpha)
+  o = n_elements(c) gt 6 ? obj_new('idlgrpolygon', v, poly = c, color = color, alpha = alpha) : obj_new()
   self.sub_isos[index] = o
 end
   

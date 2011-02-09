@@ -44,6 +44,7 @@ pro cloudviz_hub::setCurrentStructure, structure, force = force
 end
 
 pro cloudviz_hub::cleanup
+  self->IDL_CONTAINER::cleanup
   ptr_free, [self.data, self.structure_ids]
   obj_destroy, [self.listener, self.gui]
 end
