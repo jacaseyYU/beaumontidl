@@ -60,7 +60,7 @@ end
 pro cloudslice::cleanup
   self->cloudviz_client::cleanup
   self->slice3::cleanup
-  obj_destroy, self.maskobj
+  obj_destroy, [self.maskobj, self.listener_toggle]
   ptr_free, self.mask
 end
 
@@ -86,6 +86,7 @@ function cloudslice::init, hub
   if ~self->slice3::init(ptr_new(cube, /no_copy), slice = 2) then return, 0
   self->add_image, self.maskobj
   self.listener_toggle = obj_new('listener_toggle')
+  self.widget_base = self.base
   return, 1
 end
 

@@ -83,7 +83,7 @@ function cloudviz_panel::init, hub
         }
   sptr = ptr_new(state, /no_copy)
   widget_control, tlb, set_uvalue = sptr
-
+  self.widget_base = tlb
   return, 1
 end
 

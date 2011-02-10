@@ -19,6 +19,13 @@ pro cloudviz_client::run
 end
 
 pro cloudviz_client::cleanup
+  if self.hub->getLeader() eq self then obj_destroy, self.hub
+  if widget_info(self.widget_base, /valid) then $
+     widget_control, self.widget_base, /destroy
+end
+
+function cloudviz_client::getWidgetBase
+  return, self.widget_base
 end
 
 function cloudviz_client::init, hub
@@ -37,6 +44,7 @@ end
 
 pro cloudviz_client__define
   data = {cloudviz_client, $
-          hub:obj_new() $
+          hub:obj_new(), $
+          widget_base:0L $
          }
 end
