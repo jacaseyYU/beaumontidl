@@ -19,14 +19,21 @@ pro dg
   hub = obj_new('cloudviz_hub', ptr)
   panel = obj_new('cloudviz_panel', hub)
   plot = obj_new('dendroplot', hub)
-  slice = obj_new('cloudslice', hub)
+;  slice = obj_new('cloudslice', hub)
   listen = obj_new('dendroviz_listener', hub)
-  iso = obj_new('cloudiso', hub)
+  nst = n_elements((*ptr).height)
+  rec = {x:0., y:0.}
+  cat = replicate(rec, nst)
+  cat.x = findgen(nst)
+  cat.y = sin(cat.x / 10)
+  scatter = obj_new('cloudscatter', hub, cat)
+;  iso = obj_new('cloudiso', hub)
   hub->add, panel
-  hub->add, iso
+;  hub->add, iso
   hub->add, plot
-  hub->add, slice
+;  hub->add, slice
   hub->addListener, listen
+  hub->add, scatter
   return
   
   if ~contains_tag(*ptr, 'CLUSTER_LABEL_H') then begin

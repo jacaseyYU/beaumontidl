@@ -3,6 +3,10 @@ pro cloudviz_hub::receiveEvent, event, _extra = extra
      self.listener->event, event
 end
 
+function cloudviz_hub::getLeader
+  return, self.leader
+end
+
 function cloudviz_hub::getListener
   return, self.listener
 end
@@ -17,9 +21,17 @@ pro cloudviz_hub::addClient, client
   self->add, client
 end
 
-pro cloudviz_hub::add, client
+pro cloudviz_hub::setLeader, leader
+  if ~obj_valid(leader) || ~obj_isa(leader, 'cloudviz_client') then $
+     message, 'leader must be a cloudviz_client object'
+  self.leader = leader
+end
+
+pro cloudviz_hub::add, client, leader = leader
   if ~obj_valid(client) || ~obj_isa(client, 'cloudviz_client') then $
      message, 'hubs can only hold cloudviz_client objects'
+  cs = self->get(/all, count = ct)
+  if ct eq 0 || keyword_set(leader) then self.leader = client
   self->IDL_CONTAINER::add, client
   client->run
 end
@@ -46,7 +58,7 @@ end
 pro cloudviz_hub::cleanup
   self->IDL_CONTAINER::cleanup
   ptr_free, [self.data, self.structure_ids]
-  obj_destroy, [self.listener, self.gui]
+  obj_destroy, [self.listener, self.leader]
 end
 
 function cloudviz_hub::getColors, index
@@ -135,11 +147,11 @@ pro cloudviz_hub__define
   data = {cloudviz_hub, $
           inherits IDL_CONTAINER, $
           listener:obj_new(), $
-          gui: obj_new(), $
           data: ptr_new(), $
           colors: bytarr(4, 8), $
           structure_ids: ptrarr(8), $
           currentID: 0, $
+          leader:obj_new(), $
           isListening: 0B $
          }
 end

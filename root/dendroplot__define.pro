@@ -105,8 +105,11 @@ function dendroplot::init, hub, _extra = extra
 
   self.listener_toggle = obj_new('listener_toggle')
 
-  return, self->interwin::init(model, _extra = extra, title='Dendrogram')
+  if ~self->interwin::init(model, _extra = extra, title='Dendrogram') $
+  then return, 0
 
+  self.widget_base = self.base
+  return, 1
 end
 
 pro dendroplot::run

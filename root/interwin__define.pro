@@ -109,7 +109,7 @@ function interwin_event, event
   compile_opt idl2
   child = widget_info(event.handler, /child)
   widget_control, child, get_uvalue = info
-  return, info->event(event)
+  return, obj_valid(info) ? info->event(event) : 0
 end
 
 pro interwin_event, event

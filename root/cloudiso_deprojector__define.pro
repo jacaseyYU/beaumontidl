@@ -34,6 +34,7 @@ pro cloudiso_deprojector::recalculateiso, index, structure
 end
   
 pro cloudiso_deprojector::cleanup
+  self->cloudiso::cleanup
   ptr_free,[self.vel, self.vcen]
 end
 
