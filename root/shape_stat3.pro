@@ -40,7 +40,6 @@ pro shape_stat3, image, $
                  sphericity = sphericity
 
   compile_opt idl2
-  on_error, 2
 
   ;- check inputs
   if n_params() ne 1 then begin
@@ -60,7 +59,8 @@ pro shape_stat3, image, $
      message, /con, 'WARNING: some elements of the input are negative. Bad times...'
 
   indices, m, x, y, z
-  
+  if n_elements(z) eq 0 then z = x * 0
+
   ;-the mean
   ux = total(x * m) / total(m)
   uy = total(y * m) / total(m)
