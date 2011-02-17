@@ -7,6 +7,18 @@ pro dendroviz_listener::event, event
   
 end
 
+pro dendroviz_listener::selectSubstructures
+  ptr = self.hub->getData()
+  ids = self.hub->getCurrentStructure()
+  hit = byte((*ptr).height * 0)
+  for i = 0, n_elements(ids) - 1, 1 do begin
+     hit[leafward_mergers(ids[i], (*ptr).clusters)] = 1
+  endfor
+  result = where(hit, ct)
+  if ct eq 0 then return
+  self.hub->setCurrentStructure, result
+end
+  
 pro dendroviz_listener::keyboardEvent, event
   ptr = self.hub->getData()
 
@@ -24,6 +36,7 @@ pro dendroviz_listener::keyboardEvent, event
         'X': self.hub->setCurrentStructure, -2 
         'L': self.hub->setCurrentStructure, get_leaves((*ptr).clusters) 
         'F': self.hub->forceUpdate
+        'S': self->selectSubstructures
         else:
      endcase
      return
