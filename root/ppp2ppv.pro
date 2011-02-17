@@ -87,8 +87,9 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension
   valid = (ind ge 0) and (ind lt n_elements(bincenters))
   data *= valid
   
-  x = indgen(sz[1] * sz[2]) mod sz[1]
-  y = indgen(sz[1] * sz[2]) / sz[1]
+  x = lindgen(sz[1] * sz[2]) mod sz[1]
+  y = lindgen(sz[1] * sz[2]) / sz[1]
+
   for i = 0, sz[3] - 1 do begin
      z = x * 0 + i
      z1 = (i eq (sz[3] - 1)) ? z : z + 1
