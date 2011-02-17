@@ -10,6 +10,7 @@ end
 pro dendroviz_listener::selectSubstructures
   ptr = self.hub->getData()
   ids = self.hub->getCurrentStructure()
+  if min(ids) lt 0 then return
   hit = byte((*ptr).height * 0)
   for i = 0, n_elements(ids) - 1, 1 do begin
      hit[leafward_mergers(ids[i], (*ptr).clusters)] = 1
