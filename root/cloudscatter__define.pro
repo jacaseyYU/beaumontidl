@@ -174,7 +174,7 @@ pro cloudscatter::updateSubplot, index
   assert, obj_valid(self.subplots[index])
 
   self.subplots[index]->getProperty, symbol = s
-  s->setProperty, color = color[0:2], alpha = color[3]/255.
+  s->setProperty, color = color[0:2], alpha = 1;color[3]/255.
   self.subplots[index]->setProperty, datax = [x], datay = [y]
      
 
