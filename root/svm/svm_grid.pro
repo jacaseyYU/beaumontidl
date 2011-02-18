@@ -73,7 +73,8 @@ function svm_grid, train, test, answers, c, g = g, verbose = verbose
   data.g = ggrid
 
   for i = 0, n_elements(data) - 1, 1 do begin
-     print, i, data[i].c, data[i].g
+     if keyword_set(verbose) then $
+        print, i, data[i].c, data[i].g
      model = svm_learn(train, outfile='model.grid.tmp', $
                        kernel=kernel, c=data[i].c, g=data[i].g)
      guess = svm_classify(test, model, outfile='guess.grid.tmp')
@@ -90,9 +91,9 @@ function svm_grid, train, test, answers, c, g = g, verbose = verbose
 
   if keyword_set(verbose) then begin
      ;- summarize results
-     mpre = max(data.precision, preloc)
-     mre = max(data.recall, reloc)
-     macc = max(data.accuracy, aloc)
+     mpre = max(data.precision, preloc,/nan)
+     mre = max(data.recall, reloc,/nan)
+     macc = max(data.accuracy, aloc,/nan)
      
      if ng eq 0 then begin
         fmt='(a, e8.2, 3x, "c= ", e8.2)'
