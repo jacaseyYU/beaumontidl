@@ -31,7 +31,8 @@ pro svm_tutorial
   kernel = 2 ;- use RBF kernel
   c = 10 ;- value for C, the misclassification penalty
   g = 1e-4 ;- value for g, the RBF free parameter
-  model = svm_learn(file, kernel = kernel, c = c, g = g, outfile = 'model.dat')
+  model = svm_learn(training_file, kernel = kernel, c = c, g = g, $
+                    outfile = 'model.dat')
 
   
   ;- create a regular grid of xy points, and classify each point
