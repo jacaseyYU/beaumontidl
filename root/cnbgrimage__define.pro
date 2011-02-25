@@ -283,9 +283,10 @@ pro test
   win->draw, view
 
   wait, .1
-  im2 = obj_new('CNBgrImage', shift(cube*sin(cube), 10), color=[1.,0.,0.], alpha=1., $
+  cube = rebin(dist(128), 128, 128, 128)
+  im2 = obj_new('CNBgrImage', cube, slice = 2, color=[1.,0.,0.], alpha=.3, $
                 blend=[3,4])
-  model->add, im2
+  model->add, im2, pos = 1
   win->draw, view
 
   obj_destroy, view
