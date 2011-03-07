@@ -19,6 +19,7 @@ end
 
 pro cloudviz_hub::addClient, client
   self->add, client
+  self->reflow, client
 end
 
 pro cloudviz_hub::setLeader, leader
@@ -34,6 +35,27 @@ pro cloudviz_hub::add, client, leader = leader
   if ct eq 0 || keyword_set(leader) then self.leader = client
   self->IDL_CONTAINER::add, client
   client->run
+end
+
+pro cloudviz_hub::reflow, single
+  cs = self->get(/all, count = ct)
+  dx = 400
+  dy = 100
+  sz = get_screen_size()
+  x = 0
+  y = 0
+  for i = 0, ct - 1, 1 do begin
+     if ~obj_valid(cs[i]) then continue
+     base = cs[i]->getWidgetBase()
+     if ~obj_valid(single) or single eq cs[i] then $
+        widget_control, base, xoffset = x, yoffset = y
+     x += dx
+     if (x + dx ge sz[0]) then begin
+        x = 0
+        y += dy
+        y = y < (sz[1] - dy)
+     endif
+  endfor
 end
 
 pro cloudviz_hub::setCurrentStructure, structure, force = force

@@ -30,6 +30,15 @@ function cloudviz_panel::event, event
         if cancel then break
         self.hub->setColor, i, new
      end
+     'slice_b': begin
+        self.hub->addClient, obj_new('cloudslice', self.hub)
+     end
+     'iso_b': begin
+        self.hub->addClient, obj_new('cloudiso', self.hub)
+     end
+     'scatter_b': begin
+        self.hub->addClient, obj_new('cloudscatter', self.hub, *self.data)
+     end
      else: print, "unrecognized event"
   endcase
   return, 1
@@ -49,7 +58,7 @@ pro cloudviz_panel::notifyCurrent, id
                      (*sptr).uncheck_bmp
 end
 
-function cloudviz_panel::init, hub
+function cloudviz_panel::init, hub, data = data
   if ~self->cloudviz_client::init(hub) then return, 0
 
   tlb = widget_base(/column) & self.tlb = tlb
@@ -78,6 +87,17 @@ function cloudviz_panel::init, hub
   endfor
   widget_control, selects[0], set_value=red_check
 
+  ;- client buttons
+  button_base = widget_base(tlb, /column)
+  self.button_base = button_base
+  slice_b = widget_button(button_base, value='Slice', uval = 'slice_b')
+  iso_b = widget_button(button_base, value='Isosurface', uval = 'iso_b')
+
+  if keyword_set(data) then begin
+     scatter_b = widget_button(button_base, value='Scatter Plot', uval = 'scatter_b')
+     self.data = ptr_new(data)
+  endif
+  
   state={obj:self, rows:rows, selects:selects, colors:colors, $
          index:0, uncheck_bmp:check, check_bmp:red_check $
         }
@@ -95,6 +115,8 @@ end
 pro cloudviz_panel__define
   data = {cloudviz_panel, $
           inherits cloudviz_client, $
+          data:ptr_new(), $
+          button_base:0L, $
           tlb:0L $
          }
 end
