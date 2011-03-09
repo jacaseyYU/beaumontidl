@@ -1,4 +1,4 @@
-pro dendroviz, ptr, data = data
+pro dendroviz, ptr, data = data, ppp = ppp
 
   if n_params() ne 1 then begin
      print, 'calling sequence'
@@ -23,7 +23,7 @@ pro dendroviz, ptr, data = data
   
   ;- create guis
   hub = obj_new('cloudviz_hub', ptr)
-  panel = obj_new('cloudviz_panel', hub, data = data)
+  panel = obj_new('cloudviz_panel', hub, data = data, ppp = ppp)
   plot = obj_new('dendroplot', hub)
   listen = obj_new('dendroviz_listener', hub)
 
@@ -35,8 +35,7 @@ end
 
 pro test
 
-  restore, '~/stella_sims/viz2_data.sav'
-  (*ppv_ptr).height = alog10( (*ppv_ptr).height)
-  dendroviz, ppv_ptr
+  restore, '~/stella_sims/dendroviz_example.sav'
+  dendroviz, ptr, ppp = ppp, data = data
 
 end

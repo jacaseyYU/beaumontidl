@@ -149,6 +149,7 @@ end
 pro cloudviz_hub::addClient, client
   self->add, client
   self->reflow, client
+  self->forceUpdate, client
 end
 
 
@@ -391,12 +392,13 @@ end
 ; PURPOSE:
 ;  Force all clients to update their displays
 ;-
-pro cloudviz_hub::forceUpdate
+pro cloudviz_hub::forceUpdate, single
   self->setHourglass
 
   clients = self->IDL_CONTAINER::get(/all, count = ct)
   for i = 0, ct - 1, 1 do begin
      if ~obj_valid(clients[i]) then continue
+     if obj_valid(single) && single ne clients[i] then continue
      for j = 0, 7, 1 do begin
         clients[i]->notifyStructure, j, self->getStructure(j), /force
      endfor
