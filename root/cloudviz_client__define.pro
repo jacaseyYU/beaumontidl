@@ -1,3 +1,37 @@
+;+
+; CLASS NAME:
+;  cloudviz_client
+;
+; PURPOSE:
+;  This class defines the interface for individual visualization
+;  modules in the cloudviz library. Actual modules will subclass
+;  cloudviz_client, and override most of these methods. Each method
+;  defines a particular way of communicating with the hub, to allow
+;  several visualization modules to easily communicate with each
+;  other.
+;
+; SUPERCLASSES:
+;  none
+;
+; SUBCLASSES:
+;  dendroviz_client, dendroplot, cloudiso, cloudslice, cloudscatter
+;
+; METHODS:
+;  sendEventToHub: Relay widget events to the hub
+;  notifyCurrent: Used by hub to notify the module about which
+;                 substructure mask is currently being edited
+;  notifyColor: Used by hub to notify the module about how to color
+;               each substructure mask.
+;  notifyStructure: Used by hub to notify the module about which
+;                   structure IDs should be assigned to a given
+;                   structure mask.
+;  run: Start up the visualization module, realizing widgets, etc
+;  cleanup: Destroy the object
+;  getWidgetBase: Return the root widget ID associated with this
+;                 module.
+;  init: Create a new client object
+;-
+
 pro cloudviz_client::sendEventToHub, event, _extra = extra
   self.hub->receiveEvent, event, _extra = extra
 end

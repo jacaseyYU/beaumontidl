@@ -39,6 +39,9 @@ function cloudviz_panel::event, event
      'scatter_b': begin
         self.hub->addClient, obj_new('cloudscatter', self.hub, *self.data)
      end
+     'ppp_b': begin
+        self.hub->addClient, obj_new('cloudiso_deprojector', self.hub, (*self.ppp).v, (*self.ppp).vc)
+     end
      else: print, "unrecognized event"
   endcase
   return, 1
@@ -58,7 +61,7 @@ pro cloudviz_panel::notifyCurrent, id
                      (*sptr).uncheck_bmp
 end
 
-function cloudviz_panel::init, hub, data = data
+function cloudviz_panel::init, hub, data = data, ppp = ppp
   if ~self->cloudviz_client::init(hub) then return, 0
 
   tlb = widget_base(/column) & self.tlb = tlb
@@ -97,6 +100,14 @@ function cloudviz_panel::init, hub, data = data
      scatter_b = widget_button(button_base, value='Scatter Plot', uval = 'scatter_b')
      self.data = ptr_new(data)
   endif
+
+  if keyword_set(ppp) then begin
+     if ~ptr_valid(ppp) || size(*ppp, /type) ne 8 || $
+        ~contains_tag(*ppp, 'v') || ~contains_tag(*ppp, 'vc') then $
+        message, 'ppp must be a pointer to a structure with v and vc tags'
+     ppp_b = widget_button(button_base, value='Deprojector', uval = 'ppp_b')
+     self.ppp = ppp
+  endif
   
   state={obj:self, rows:rows, selects:selects, colors:colors, $
          index:0, uncheck_bmp:check, check_bmp:red_check $
@@ -112,10 +123,16 @@ pro cloudviz_panel::run
   xmanager, 'cloudviz_panel', self.tlb, cleanup='cloudviz_cleanup', /no_block
 end
 
+pro cloudviz_panel::cleanup
+  self->cloudviz_client::cleanup
+  ptr_free, [self.ppp, self.data]
+end
+
 pro cloudviz_panel__define
   data = {cloudviz_panel, $
           inherits cloudviz_client, $
           data:ptr_new(), $
+          ppp:ptr_new(), $
           button_base:0L, $
           tlb:0L $
          }
