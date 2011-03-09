@@ -1,6 +1,41 @@
+;+
+; CLASS NAME:
+;  cloudiso
+;
+; PURPOSE:
+;  This is a visualization module in the cloudviz/dendroviz
+;  library. It visualizes cloud substructures by rendering them as 3D
+;  isosurfaces
+;
+; CATEGORY:
+;  cloudviz, visualization
+;
+; SUPERCLASSES:
+;  cloudviz_client, interwin
+;
+; SUBCLASSES:
+;  none
+;
+; CREATION:
+;  See cloudiso::init
+;
+;-
+
+
+;+
+; PURPOSE:
+;  Processes widget events
+;
+; INPUTS:
+;   event: A standard widget event structure
+;
+; OUTPUTS:
+;  0
+;-  
 function cloudiso::event, event
   super = self->interwin::event(event)
   if event.id eq self.slider then begin
+     widget_control, self.base, /hourglass
      s = self.hub->getCurrentStructure()
      i = self.hub->getCurrentID()
      self->notifyStructure, i, s, /force
@@ -12,6 +47,21 @@ function cloudiso::event, event
   return, 0
 end
 
+
+;+
+; PURPOSE:
+;  Used by the hub to notify this mudle about a new substructure to
+;  visualize. 
+;
+; INPUTS:
+;  index: The index (0-7) of the structure to render
+;  structure: The list of structure IDs to assign to substructure
+;  INDEX
+;
+; KEYWORD PARAMETERS:
+;  force: If not set, do not update the display. We do this because
+;         recalculating the isosurfaces is expensive.
+;-
 pro cloudiso::notifyStructure, index, structure, force = force
   if ~keyword_set(force) then return
   
@@ -20,6 +70,16 @@ pro cloudiso::notifyStructure, index, structure, force = force
   self->request_redraw
 end
 
+
+;+
+; PURPOSE:
+;  Updates the isosurfaces to be rendered
+;
+; INPUTS:
+;  index: Which isosurface (0-7) to update
+;  structure: The structure IDs that will be assigned to this
+;  isosurface
+;-
 pro cloudiso::recalculateIso, index, structure
   obj_destroy, self.sub_isos[index]
   ptr = self.hub->getData()
@@ -63,6 +123,13 @@ pro cloudiso::recalculateIso, index, structure
   self.sub_isos[index] = o
 end
 
+
+;+
+; PURPOSE:
+;  Merge the 8 individual isosurfaces into a single IDLgrPolygon
+;  object. This is needed to prevent rendering artifacts, since IDL is
+;  bad at choosing which order to render and blend 3D images
+;-
 pro cloudiso::mergeIsos
   offset = 0L
   self.model->remove, self.merged
@@ -95,9 +162,16 @@ pro cloudiso::mergeIsos
   self->updatePolys
 end
 
+
+;+
+; PURPOSE:
+;  Used by the hub to tell this module which isosurface is currently
+;  being edited
+;-
 pro cloudiso::notifyCurrent, id
   widget_control, self.slider, set_value = self.slider_val[id]
 end
+
 
 pro cloudiso::notifyColor, index, color
   if ~obj_valid(self.sub_isos[index]) then return
@@ -182,7 +256,7 @@ function cloudiso::init, hub
   if ~result then return, 0
   self.widget_base = self.base
   self->set_rotation_center, sz[1:3]/2.
-  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.5)
+  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.0)
   self.slider_val[*] = .5
   return, 1
 end
