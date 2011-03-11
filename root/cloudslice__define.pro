@@ -73,8 +73,8 @@ function cloudslice::init, hub
   mask = byte(cube * 0)
 
   sz = size(cube)
-  if sz[0] ne 3 then $
-     message, 'data in cloudslice hub must describe a cube'
+;  if sz[0] ne 3 then $
+;     message, 'data in cloudslice hub must describe a cube'
 
   self.mask = ptr_new(mask, /no_copy)
   colors = bytarr(3, 8)

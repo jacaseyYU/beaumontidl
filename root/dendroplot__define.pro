@@ -96,7 +96,7 @@ function dendroplot::init, hub, _extra = extra
   xy = dplot_xy(ptr, max((*ptr).clusters + 1))
   
   self.baseplot = obj_new('idlgrplot', xy[0,*], xy[1,*])
-  yra = minmax((*ptr).height)
+  yra = minmax((*ptr).height,/nan)
 
   axis = obj_new('idlgraxis', direction = 1, range = yra)
   model = obj_new('IDLgrModel', /depth_test_disable)
