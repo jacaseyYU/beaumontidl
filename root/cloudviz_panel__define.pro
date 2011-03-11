@@ -94,7 +94,10 @@ function cloudviz_panel::init, hub, data = data, ppp = ppp
   button_base = widget_base(tlb, /column)
   self.button_base = button_base
   slice_b = widget_button(button_base, value='Slice', uval = 'slice_b')
-  iso_b = widget_button(button_base, value='Isosurface', uval = 'iso_b')
+
+  sz = size(  (*(hub->getData())).value )
+  if sz[0] eq 3 then $
+     iso_b = widget_button(button_base, value='Isosurface', uval = 'iso_b')
 
   if keyword_set(data) then begin
      scatter_b = widget_button(button_base, value='Scatter Plot', uval = 'scatter_b')
