@@ -18,12 +18,6 @@
 ;  A ppv cube. The velocity axis is always the third axis
 ;
 ; BEHAVIOR:
-;  The value of each PPP cell is assigned entirely to the nearest cell
-;  in the output cube (assuming it lies within the boundaries of that
-;  cube). Note that this will cause sampling/alias artifacts if the
-;  bincenters are more finely spaced than the typical pixel-to-pixel
-;  velocity jumps in the input cube.
-;  
 ;  If the ppp cube dimensions are (nx, ny, nz) and the bincenters
 ;  vector has nv elements, the dimensions of the output cube are as
 ;  follows: 
