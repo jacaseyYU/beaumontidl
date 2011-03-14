@@ -1,43 +1,61 @@
-pro bwclip_select__event, event
+pro update_plot, ptr
+  widget_control, (*ptr).draw, get_value = v
+  wset, v
+
+  plot, (*ptr).l, (*ptr).h, psym = 10, charsize = 1
+  oplot, (*ptr).lval + [0,0], minmax((*ptr).h), color = fsc_color('red')
+  oplot, (*ptr).hval + [0,0], minmax((*ptr).h), color = fsc_color('green')
+end
+
+pro bwclip_select_event, event
   widget_control, event.top, get_uvalue = ptr
-  help, event, /struct
 
   case event.id of
      (*ptr).draw: begin
-        print, 'draw event'
+        xyz = convert_coord(event.x, event.y, /device, /to_data)
+        if event.press eq 1 then $
+           (*ptr).lval = xyz[0]
+        if event.press eq 4 then $
+           (*ptr).hval = xyz[0]
      end
      (*ptr).low: begin
-        print, 'low event'
+        widget_control, event.id, get_value = v
+        v = float(v)
+        (*ptr).lval = v
      end
-
      (*ptr).hi: begin
-        print, 'hi event'
+        widget_control, event.id, get_value = v
+        v = float(v)
+        (*ptr).hval = v
      end
      
      (*ptr).apply: begin
         widget_control, event.top, /destroy
+        return
      end
 
      (*ptr).cancel: begin
         (*ptr).doCancel = 1
         widget_control, event.top, /destroy
+        return
      end
 
      else:
   endcase
-  
+  update_plot, ptr
+
   ;- get lo, hi values
-  widget_control, (*ptr).low, get_value = lo
-  widget_control, (*ptr).hi, get_value = lo
+  widget_control, (*ptr).low, set_value = string((*ptr).lval, format='(e0.3)')
+  widget_control, (*ptr).hi, set_value = string((*ptr).hval, format='(e0.3)')
 end
 
 function bwclip_select, im, cancel = cancel
 
   tlb = widget_base(/col)
-  draw = widget_draw(tlb, xsize = 400, ysize = 200, /mouse_event)
+  draw = widget_draw(tlb, xsize = 500, ysize = 300, /button)
   tbase = widget_base(tlb, /row)
-  low = cw_field(tbase, title='Low')
-  hi = cw_field(tbase, title='Hi')
+  low = cw_field(tbase, title='Low', /return_events)
+  hi = cw_field(tbase, title='Hi', /return_events)
 
   bbase = widget_base(tlb, /row)
   apply = widget_button(bbase, value='apply')
@@ -53,12 +71,12 @@ function bwclip_select, im, cancel = cancel
      r = randomu(seed, 1e5) * gct
      v = im[good[r]]
   endif else v = im[good]
-  h = histogram(v, nbin = (gct / 10) < 1e3, loc = l)
+  h = histogram(v, nbin = (gct / 10) < 1e2, loc = l)
 
   widget_control, tlb, /realize
 
   ;- plot
-  widget_control, self.draw, get_value = wid
+  widget_control, draw, get_value = wid
   wset, wid
 
   plot, l, h, psym = 10, charsize = 1.5
@@ -74,10 +92,17 @@ function bwclip_select, im, cancel = cancel
 
   ptr = ptr_new(state)
   widget_control, tlb, set_uvalue = ptr
-  xmanager, 'bwclip', tlb
 
-  return, [(*ptr).lval, (*ptr).hval]
+  update_plot, ptr
+  xmanager, 'bwclip_select', tlb
 
+  cancel = 0
+  if (*ptr).doCancel then begin
+     cancel = 1
+     result = [0,0]
+  endif else result = [(*ptr).lval, (*ptr).hval]
+  ptr_free, ptr
+  return, result
 end
 
 pro test

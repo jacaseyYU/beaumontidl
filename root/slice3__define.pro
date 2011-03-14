@@ -73,8 +73,25 @@ function slice3::event, event, draw_event = draw_event
      self->update_images 
      return, 0
   endif
+
+  ;- menu events
+  if event.id eq self.mbar && strmatch(event.value, 'Image.*') then begin
+     im = self->get_images(ct)
+     for i = 0, ct - 1, 1 do begin
+        case event.value of
+           'Image.Scale Mode.Linear': im[i]->set_stretch, /linear
+           'Image.Scale Mode.Square Root': im[i]->set_stretch, /sqrt
+           'Image.Scale Mode.Log': im[i]->set_stretch, /log
+           'Image.Adjust Min/Max...': im[i]->set_stretch, /interactive
+           else:
+        endcase
+     endfor
+     self->update_images
+  endif
+
   super = self->interwin::event(event)
   if size(super, /tname) ne 'STRUCT' then return, 1
+
   result = create_struct(super, 'Z', 0, $
                          name = 'SLICE3_EVENT')
   
@@ -87,7 +104,7 @@ function slice3::event, event, draw_event = draw_event
      x = result.x & y = result.y & z = index
   endelse
   result.x = x & result.y = y & result.z = z
-  
+
   return, result
 end
 
@@ -195,6 +212,16 @@ function slice3::init, cube, slice = slice, $
                                 yrange=[0,sz[1]], _extra = extra, image = image, $
                                 title='Slice')
   if result eq 0 then return, 0
+
+
+  ;- extra menu buttons
+  menu_desc = ['1\Image', $
+               '1\Scale Mode', $
+               '0\Linear', $
+               '0\Square Root', $
+               '2\Log', $
+               '2\Adjust Min/Max...']
+  scalebutton = cw_pdmenu(self.mbar, menu_desc, /mbar, /return_full_name)
 
   self.slider = widget_slider(self.base, min = 0, max = (slice_sz-1)>1, $
                               value = slice_sz/2, /drag, sensitive = ~self.is2D)
