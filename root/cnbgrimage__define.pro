@@ -85,8 +85,8 @@ pro CNBgrImage::set_pos, x = x, y = y, z = z
 end
 
 pro CNBgrImage::set_stretch, bias = bias, contrast = contrast, black = black, white = white, $
-                             sqrt = sqrt, log = log, linear = linear
-
+                             sqrt = sqrt, log = log, linear = linear, interactive = interactive
+  if self.noscale then return
   if keyword_set(black) then self.black = black
   if keyword_set(white) then self.white = white
   if keyword_set(bias) then self.bias = bias
@@ -94,6 +94,13 @@ pro CNBgrImage::set_stretch, bias = bias, contrast = contrast, black = black, wh
   if keyword_set(sqrt) then self.scale='SQRT'
   if keyword_set(log) then self.scale='LOG'
   if keyword_set(linear) then self.scale='LINEAR'
+  if keyword_set(interactive) then begin
+     bw = bwclip_select(*(self.raw_data), cancel = cancel)
+     if ~cancel then begin
+        self.black = bw[0]
+        self.white = bw[1]
+     endif
+  endif
   self->redraw
 end
 
