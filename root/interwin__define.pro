@@ -547,6 +547,9 @@ end
 pro interwin::cleanup
   obj_destroy, self.view
   obj_destroy, self.trackball
+  tlb = self.base
+  if widget_info(tlb, /valid_id) then $
+     widget_control, tlb, /destroy
 end
 
 function interwin::get_widget_id
