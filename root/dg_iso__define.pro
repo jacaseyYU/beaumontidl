@@ -219,7 +219,7 @@ function dg_iso::init, ptr, color = color, alpha = alpha, $
                                 _extra = extra, /rotate, $
                                 title=keyword_set(title) ? title : 'Isosurfaces')
   self->set_rotation_center, sz[1:3]/2.
-  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.5)
+  self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.0)
 
   return, 1
 end

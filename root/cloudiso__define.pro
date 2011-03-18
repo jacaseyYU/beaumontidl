@@ -257,7 +257,7 @@ function cloudiso::init, hub
   self.widget_base = self.base
   self->set_rotation_center, sz[1:3]/2.
   self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.0)
-  self.slider_val[*] = .5
+  self.slider_val[*] = 0.0
   return, 1
 end
 
