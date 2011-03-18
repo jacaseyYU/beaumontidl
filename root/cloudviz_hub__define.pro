@@ -264,8 +264,9 @@ end
 ;-
 pro cloudviz_hub::cleanup
   self->IDL_CONTAINER::cleanup
-  ptr_free, [self.data, self.structure_ids]
+  ptr_free, [self.structure_ids]
   obj_destroy, [self.listener, self.leader]
+  !except = 0
 end
 
 
@@ -444,7 +445,7 @@ function cloudviz_hub::init, ptr, colors = colors
      ~contains_tag(*ptr, 'VALUE') then $
         message, 'Pointer does not point to a structure with the proper tags'
      
-     
+  !except = -1
   self.data = ptr
 
   if keyword_set(colors) then begin
