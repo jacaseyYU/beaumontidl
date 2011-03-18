@@ -27,20 +27,29 @@
 ;            2                       (nx, nz, nv)
 ;            3 (default)             (nx, ny, nv)
 ;
+;   This program takes care to interpolate the PPP cube when adjacent
+;   pixels along a single PPP line of sight project into non-adjacent
+;   pixels in PPV. This suppresses sampling artifacts. It also
+;   preserves the sum of the cube along each line of sight. In other
+;   words, total(ppp, dimension) and total(ppv, 3) will give the same
+;   result. 
+;
 ; MODIFICATION HISTORY:
-;  Jan 21 2010: Written by Chris Beaumont
+;  Jan 21 2011: Written by Chris Beaumont
+;  March 2011: Fixed interpolation scheme so flux is conserved
 ;-
-function ppp2ppv, ppp, vel, bincenters, dimension = dimension
+function ppp2ppv, ppp, vel, bincenters, dimension = dimension, mask = mask
   compile_opt idl2
 
   if n_params() ne 3 then begin
      print, 'Calling sequence:'
-     print, 'result = ppp2ppv(ppp, vel, bincenters, [dimension = dimension])'
+     print, 'result = ppp2ppv(ppp, vel, bincenters, [dimension = dimension, /mask])'
      return, !values.f_nan
   endif
 
   if ~keyword_set(dimension) then dimension = 3
-  
+  doMask = keyword_set(mask)
+
   if dimension lt 1 || dimension gt 3 then $
      message, 'dimension must be 1, 2, or 3'
 
@@ -75,11 +84,22 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension
   endcase
 
   sz = size(data)
-  result = dblarr(sz[1], sz[2], nbin)
+  
+  ;- IDL trims off trailing dimensions of size 1.
+  ;- put it back if needed. annoying
+  if sz[0] ne 3 then begin
+     data = reform(data, sz[1], sz[0] eq 2 ? sz[2] : 1, 1, /over)
+     velo = reform(velo, sz[1], sz[0] eq 2 ? sz[2] : 1, 1, /over)
+     sz = size(data)
+  endif
+  assert, sz[0] eq 3
 
+  result = doMask ? bytarr(sz[1], sz[2], sz[3]) : dblarr(sz[1], sz[2], nbin)
+  assert, (size(result))[0] eq 3
   ind = floor((velo - (bincenters[0] - binsize/2.)) / binsize)
   valid = (ind ge 0) and (ind lt n_elements(bincenters))
-  data *= valid
+  
+  data = doMask ? byte(data ne 0 and valid) : data * valid
   
   x = lindgen(sz[1] * sz[2]) mod sz[1]
   y = lindgen(sz[1] * sz[2]) / sz[1]
@@ -93,11 +113,20 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension
      jump = 3 * fix(max(abs(v1 - v)) + 1)
      for j = 0, jump-1, 1 do begin
         w = 1.0 * j / jump
-        val = data[x, y, z] * (1 - w) + data[x,y,z1] * w
-        vp = v * (1 - w) + v1 * w
-        result[x,y,floor(vp)] += val / float(jump)
+        ;val = data[x, y, z] * (1 - w) + data[x,y,z1] * w
+        val = data[x,y,z]
+        vp = floor(v * (1 - w) + v1 * w)
+        if doMask then $
+           result[x,y,vp] or= val $
+        else $
+           result[x,y,vp] += val / float(jump)
      endfor
   endfor
+
+  ;- make sure we preserve flux
+  if ~doMask then $
+     assert, abs(total(result) - total(data)) / total(data) lt 1d-3
+
   return, result
 end
 
@@ -121,5 +150,5 @@ pro test
 
   ppv = ppp2ppv(data, xvel, bincenters, dim = 2)
   assert, min( abs(ppv - answer) lt 1e-5 )
-  
+  print, 'all tests passed'
 end
