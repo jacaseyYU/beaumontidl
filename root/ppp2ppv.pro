@@ -94,7 +94,7 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension, mask = mask
   endif
   assert, sz[0] eq 3
 
-  result = doMask ? bytarr(sz[1], sz[2], sz[3]) : dblarr(sz[1], sz[2], nbin)
+  result = doMask ? bytarr(sz[1], sz[2], nbin) : dblarr(sz[1], sz[2], nbin)
   assert, (size(result))[0] eq 3
   ind = floor((velo - (bincenters[0] - binsize/2.)) / binsize)
   valid = (ind ge 0) and (ind lt n_elements(bincenters))

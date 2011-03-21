@@ -13,13 +13,14 @@ function dendrocpp2cloudviz, file
   id =mrdfits(file, 1, h,/silent)
   clusters = mrdfits(file, 2, h,/silent)
 
-  h = histogram(id, min = 0, rev = ri, max = max(id)+3)
   sz = size(clusters)
   start = (sz[2]+1)/2
   assert, max(clusters[*, start-1]) eq -1 && min(clusters[*,start]) ge 0
   clusters = clusters[*, (sz[2]+1) / 2 : *]
   nleaf = (sz[2]+1)/2
   heights = fltarr(sz[2])
+  h = histogram(id, min = 0, rev = ri, max = 2 * nleaf - 1)
+
   for i = 0, sz[2] - 1, 1 do begin
      isLeaf = i lt nleaf
      if isLeaf then begin
