@@ -2,10 +2,19 @@ pro dendroviz, ptr, data = data, ppp = ppp
 
   if n_params() ne 1 then begin
      print, 'calling sequence'
-     print, ' dendroviz, ptr, [data = data]'
+     print, ' dendroviz, ptr, [data = data], OR'
+     print, ' dendrofiz, file, [data = data]'
      print, ' ptr: dendrogram pointer (returned from TOPOLOGIZE'
+     print, ' file: Filename of a dendrogram generated from C++ code'
      print, ' data: a catalog (Array of structures, 1 per dendrogram struct)'
      return
+  endif
+
+  ;- if ptr is actually a file name, treat it as a C++ dendro file
+  if size(ptr, /type) eq 7 then begin
+     if ~file_test(ptr) then $
+        message, 'Could not find input file: ' + ptr
+     ptr = dendrocpp2cloudviz(ptr)
   endif
 
   if ~contains_tag(*ptr, 'CLUSTER_LABEL_H') then begin
