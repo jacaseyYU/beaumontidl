@@ -1,4 +1,4 @@
-pro dendroviz, ptr, data = data, ppp = ppp
+pro dendroviz, ptr, data = data, ppp = ppp, log = log
 
   if n_params() ne 1 then begin
      print, 'calling sequence'
@@ -30,6 +30,8 @@ pro dendroviz, ptr, data = data, ppp = ppp
      ptr = dendro2cloudviz(ptr)
   endif
   
+  if keyword_set(log) then (*ptr).height = alog10((*ptr).height)
+
   ;- create guis
   hub = obj_new('cloudviz_hub', ptr)
   panel = obj_new('cloudviz_panel', hub, data = data, ppp = ppp)

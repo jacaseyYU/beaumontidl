@@ -53,9 +53,9 @@ pro shape_stat3, image, $
   if nd ne 3 then message, 'Image must be a 3D array'
 
   m = double(image * (keyword_set(mask) ? mask : 1))
-  if total(m lt 0) then $
+  if total(m) lt 0 then $
      message, 'Total of image is negative -- cannot continue'
-  if min(m lt 0) then $
+  if min(m) lt 0 then $
      message, /con, 'WARNING: some elements of the input are negative. Bad times...'
 
   indices, m, x, y, z
