@@ -210,7 +210,8 @@ pro cloudviz_hub::reflow, single
   for i = 0, ct - 1, 1 do begin
      if ~obj_valid(cs[i]) then continue
      base = cs[i]->getWidgetBase()
-     if ~obj_valid(single) or single eq cs[i] then $
+     valid = widget_info(base, /valid)
+     if valid && (~obj_valid(single) or single eq cs[i]) then $
         widget_control, base, xoffset = x, yoffset = y
      x += dx
      if (x + dx ge sz[0]) then begin
@@ -384,7 +385,9 @@ pro cloudviz_hub::setHourglass
   cs = self->get(/all, count = ct)
   for i = 0, ct - 1, 1 do begin
      if ~obj_valid(cs[i]) then continue
-     widget_control, cs[i]->getWidgetBase(), /hourglass
+     base = cs[i]->getWidgetBase()
+     valid = widget_info(base, /valid)
+     if valid then widget_control, base, /hourglass
   endfor
 end
 
