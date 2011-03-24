@@ -1,9 +1,9 @@
-pro dendroviz, ptr, data = data, ppp = ppp, log = log
+pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
 
   if n_params() ne 1 then begin
      print, 'calling sequence'
-     print, ' dendroviz, ptr, [data = data], OR'
-     print, ' dendrofiz, file, [data = data]'
+     print, ' dendroviz, ptr, [data = data, /log], OR'
+     print, ' dendrofiz, file, [data = data, /log]'
      print, ' ptr: dendrogram pointer (returned from TOPOLOGIZE'
      print, ' file: Filename of a dendrogram generated from C++ code'
      print, ' data: a catalog (Array of structures, 1 per dendrogram struct)'
@@ -42,6 +42,17 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log
   hub->addClient, plot
   hub->addListener, listen
 
+  if keyword_set(match_ppp) then begin
+     hub2 = obj_new('cloudviz_hub', match_ppp.ptr)
+     panel2 = obj_new('cloudviz_panel', hub2, ppp = ppp)
+     plot2 = obj_new('dendroplot', hub2)
+     listen2 = obj_new('dendroviz_listener', hub2)
+
+     hub2->addClient, panel2
+     hub2->addClient, plot2
+     hub2->addListener, listen2
+     bridge = obj_new('cloudviz_bridge', hub, hub2, match_ppp.match)
+  endif
 end 
 
 pro test
