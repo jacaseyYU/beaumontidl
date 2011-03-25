@@ -134,9 +134,7 @@ function match_dendro_2, ppp, ppv, v_cube, vcen, matrix = matrix, $
                      ra[0], ra[1], ra[2])
      vstamp = reform(v_cube[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]], $
                      ra[0], ra[1], ra[2])
-     proj = ppp2ppv(stamp, vstamp, vcen)
-     proj2 = ppp2ppv(stamp, vstamp, vcen, /mask)
-     if ~array_equal(proj2, proj ne 0) then stop
+     proj = cppp2ppv(stamp, vstamp, vcen)
 
      assert, abs(total(proj) - total(stamp)) / (total(stamp) > 1d-30) lt 1e-2
      

@@ -40,6 +40,7 @@
 ;-
 function ppp2ppv, ppp, vel, bincenters, dimension = dimension, mask = mask
   compile_opt idl2
+  DEBUG = 0
 
   if n_params() ne 3 then begin
      print, 'Calling sequence:'
@@ -124,7 +125,7 @@ function ppp2ppv, ppp, vel, bincenters, dimension = dimension, mask = mask
   endfor
 
   ;- make sure we preserve flux
-  if ~doMask then $
+  if ~doMask && DEBUG then $
      assert, abs(total(result) - total(data)) / total(data) lt 1d-3
 
   return, result
