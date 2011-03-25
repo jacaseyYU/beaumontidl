@@ -15,7 +15,7 @@ function dendrocpp2idl, file
   id =mrdfits(file, 1, h,/silent)
   clusters = mrdfits(file, 2, h,/silent)
 
-  cv = dendrocpp2cloudviz(file, bin = bin)
+  cv = dendrocpp2cloudviz(file)
   
   ci = lindgen(n_elements((*cv).value))
   sz = size(value)
