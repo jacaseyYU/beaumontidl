@@ -15,10 +15,14 @@ function dendrocpp2idl, file
   id =mrdfits(file, 1, h,/silent)
   clusters = mrdfits(file, 2, h,/silent)
 
-  cv = dendrocpp2cloudviz(file)
+  cv = dendrocpp2cloudviz(file, bin = bin)
   
   ci = lindgen(n_elements((*cv).value))
-  indices, im, x, y, v
+  sz = size(value)
+  ind = lindgen(n_elements(im))
+  x = ind mod sz[1]
+  y = (ind / sz[1]) mod sz[2]
+  v = (sz[0] eq 3) ? (ind / (sz[1] * sz[2])) : ind*0
 
   st = {$
        t:(*cv).value, $
