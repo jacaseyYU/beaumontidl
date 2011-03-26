@@ -55,8 +55,8 @@ function virial_props_ppp, ptr, vel, len_scale = len_scale, vel_scale = vel_scal
      assert, total(stamp * p_2) lt 1e-3 * total(stamp)
      assert, total(stamp * p_3) lt 1e-3 * total(stamp)
 
-     tt = total(stamp)
-     assert, abs(total(t) - tt) / tt lt 1d-3
+     tt = total(stamp, /double)
+     assert, abs(total(t,/double) - tt) / tt lt 1d-3
      sig_maj = sqrt(total(stamp * p_1^2) / tt) * len_scale
      sig_min = sqrt(total(stamp * p_2^2) / tt) * len_scale
      assert, sig_maj ge sig_min

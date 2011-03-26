@@ -19,11 +19,11 @@ function virial_props, ptr, len_scale = len_scale, vel_scale = vel_scale, flux2m
   data = replicate(rec, nst)
 
   for i = 0, nst - 1, 1 do begin
-     if (*ptr).cluster_label_h[i] eq 0 then continue
+     ind = substruct(i, ptr, count = ct)
+     if ct eq 0 then continue
 
      if (i + 1) mod 20 eq 0 then print, i+1, nst
 
-     ind = substruct(i, ptr, count = ct)
      x = (*ptr).x[ind] & y = (*ptr).y[ind] & v = (*ptr).v[ind] & t = (*ptr).t[ind]
 
      stamp = fltarr( range(x)+2, range(y)+2, range(v) + 2)
@@ -48,8 +48,8 @@ function virial_props, ptr, len_scale = len_scale, vel_scale = vel_scale, flux2m
      p_maj = ix * ax1[0] + iy * ax1[1]
      p_min = sqrt( (ix^2 + iy^2) - p_maj^2 )
 
-     tt = total(stamp)
-     assert, abs(tt - total(t)) / tt lt 1d-3
+     tt = total(stamp,/double)
+     assert, abs(tt - total(t,/double)) / tt lt 1d-3
      sig_maj = sqrt(total(stamp * p_maj^2) / tt) * len_scale
      sig_min = sqrt(total(stamp * p_min^2) / tt) * len_scale
      sig_vel = sqrt(total(stamp * iz^2) / tt) * vel_scale
