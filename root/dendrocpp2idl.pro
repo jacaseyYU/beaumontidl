@@ -18,7 +18,7 @@ function dendrocpp2idl, file
   cv = dendrocpp2cloudviz(file)
   
   ci = lindgen(n_elements((*cv).value))
-  sz = size(value)
+  sz = size(im)
   ind = lindgen(n_elements(im))
   x = ind mod sz[1]
   y = (ind / sz[1]) mod sz[2]
