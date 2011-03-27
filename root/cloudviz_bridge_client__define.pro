@@ -3,7 +3,6 @@ pro cloudviz_bridge_client::setListen, listen
 end
 
 pro cloudviz_bridge_client::notifyStructure, id, structure, force = force
-  print, 'bridge client structure'
   if ~self.doListen then return
   self.bridge->notifyStructure, id, structure, self.hub, force = force
 end

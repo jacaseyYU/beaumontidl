@@ -1,3 +1,49 @@
+;+
+; PURPOSE:
+;  This function concatenates 2 structures or structure arrays,
+;  merging the tags from each input. It differs from the builtin
+;  function CREATE_STRUCT in 2 ways. First, it can join entire arrays
+;  of structures at once. Second, it can add prefixes to the tag names
+;  to prevent duplicate tag names.
+;
+; INPUTS:
+;  s1: The first structure. Scalar or array
+;  s2: The second structure, Scalar or array. Must have same number of
+;      elements as s1.
+;  
+; KEYWORD PARAMETERS:
+;  prefix1: An optional string to prepend to the tag names in s1. Can
+;           be used to avoid dupicate tag names in s1 and s2
+;  prefix2: An optional string to prepend to the tag names in s2
+;
+; OUTPUTS:
+;  A new structure or array of structures. The ith entry of the output
+;  wlll consist of the data from s1[i] and s2[i].
+;
+; EXAMPLES:
+;  IDL> s1 = {x:'one', y:2, z:3D}
+;  IDL> s2 = {a:100, b:200}
+;  IDL> help, join_struct(s1, s2), /struct
+; 
+; ** Structure <1619d08>, 5 tags, length=40, data length=30, refs=1:
+;   X               STRING    'one'
+;   Y               INT              2
+;   Z               DOUBLE           3.0000000
+;   A               INT            100
+;   B               INT            200
+;
+;  IDL> help, join_struct(s1, s2, prefix1='PRE_'), /struct
+;
+; ** Structure <1532b58>, 5 tags, length=40, data length=30, refs=1:
+;   PRE_X           STRING    'one'
+;   PRE_Y           INT              2
+;   PRE_Z           DOUBLE           3.0000000
+;   A               INT            100
+;   B               INT            200
+;
+; MODIFICATION HISTORY:
+;  March 2011: Written by Chris Beaumont
+;-
 function join_struct, s1, s2, prefix1 = prefix1, prefix2 = prefix2
 
   if n_params() ne 2 then begin
@@ -33,7 +79,6 @@ function join_struct, s1, s2, prefix1 = prefix1, prefix2 = prefix2
   for i = 0, n_elements(name2) - 2, 1 do $
      cmd += string(prefix2 + name2[i], i, format='(a, ": s2[0].(", i0, "), ")')
   cmd += string(prefix2 + name2[i], i, format='(a, ": s2[0].(", i0, ")} ")')
-  print, cmd
   result = execute(cmd)
 
   result = replicate(rec, n1)

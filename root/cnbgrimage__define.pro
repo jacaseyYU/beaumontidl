@@ -229,8 +229,8 @@ function CNBgrImage::init, data, $
      endelse
   endelse
   
-  if n_elements(black) eq 0 then black = med - 5 * sig
-  if n_elements(white) eq 0 then white = med + 5 * sig
+  if n_elements(black) eq 0 then black = min(dataVal, /nan, max = hi)
+  if n_elements(white) eq 0 then white = hi
   if ~keyword_set(color) then color = [1., 1., 1.]
 
   self.minmax = minmax(dataVal, /nan)

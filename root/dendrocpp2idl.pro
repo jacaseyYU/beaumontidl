@@ -9,7 +9,7 @@ function dendrocpp2idl, file
      message, 'file must be a string'
 
   if ~file_test(file) then $
-     message, 'file not found: ', file
+     message, 'file not found: '+file
 
   im =mrdfits(file, 0, h,/silent)
   id =mrdfits(file, 1, h,/silent)

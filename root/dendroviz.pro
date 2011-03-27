@@ -31,9 +31,20 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
   endif
   
   if keyword_set(log) then (*ptr).height = alog10((*ptr).height)
+  if keyword_set(match_ppp) then begin
+     c_def = byte(transpose(fsc_color( $
+             ['red', 'teal', 'orange', 'purple', 'yellow', 'brown', 'royalblue', 'green'], $
+             /triple)))
+     c1 = bytarr(4, 8)
+     c1[0:2, 3:*] = c_def[*, 3:*]
+     c1[3,*] = 128B
+     c2 = c1
+     c2[0:2, 0:2] = byte([ [255, 0, 0], [163, 103, 26], [255, 165, 0]])
+     c1[0:2, 0:2] = byte([ [63, 0, 125], [127, 205, 186], [0, 101, 82]])
+  endif
 
   ;- create guis
-  hub = obj_new('cloudviz_hub', ptr)
+  hub = obj_new('cloudviz_hub', ptr, colors = c1)
   panel = obj_new('cloudviz_panel', hub, data = data, ppp = ppp)
   plot = obj_new('dendroplot', hub)
   listen = obj_new('dendroviz_listener', hub)
@@ -43,7 +54,7 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
   hub->addListener, listen
 
   if keyword_set(match_ppp) then begin
-     hub2 = obj_new('cloudviz_hub', match_ppp.ptr)
+     hub2 = obj_new('cloudviz_hub', match_ppp.ptr, colors = c2)
      panel2 = obj_new('cloudviz_panel', hub2, ppp = ppp)
      plot2 = obj_new('dendroplot', hub2)
      listen2 = obj_new('dendroviz_listener', hub2)
@@ -52,6 +63,10 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
      hub2->addClient, plot2
      hub2->addListener, listen2
      bridge = obj_new('cloudviz_bridge', hub, hub2, match_ppp.match)
+     v2 = plot2->get_view()
+     v2->setProperty, color=[254, 240, 230]
+     v1 = plot->get_view()
+     v1->setProperty, color=[232, 241, 255]
   endif
 end 
 
