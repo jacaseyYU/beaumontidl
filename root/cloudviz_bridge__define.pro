@@ -1,18 +1,31 @@
 pro cloudviz_bridge::notifyStructure, id, structure, hub, force = force
-  print, 'bridge structure'
+  print, keyword_set(force)
   self.client1->setListen, 0
   self.client2->setListen, 0
   match = (*self.match)
   if hub eq self.hub1 then begin
-     s = (min(structure) lt 0) ? -1 : match[structure]
+     d = self.hub2->getData()
+     ;- selection in PPV, echo in PPP
+     c = self.hub2->getCurrentID()
+     if min(structure) lt 0 then s = -1 else begin
+        ;- match root of selected hierarchy
+        s = match[max(structure)]
+        ;- select all substructures
+        s = leafward_mergers(s,(*d).clusters)
+     endelse
      self.hub2->setCurrentID, id
-     self.hub2->setCurrentStructure, s
+     self.hub2->setCurrentStructure, s, force = force
+     self.hub2->setCurrentID, c
+     if keyword_set(force) then self.hub2->forceUpdate
   endif else begin
+     ;- echo from PPP to PPV
      hit = bytarr( n_elements(match))
      for i = 0, n_elements(structure) - 1 do hit or= (match eq structure[i])
+     c = self.hub1->getCurrentID()
      s = where(hit)
      self.hub1->setCurrentID, id
-     self.hub1->setCurrentStructure, s
+     self.hub1->setCurrentStructure, s, force = force
+     self.hub1->setCurrentID, c
   endelse
 
   self.client1->setListen, 1
@@ -20,13 +33,6 @@ pro cloudviz_bridge::notifyStructure, id, structure, hub, force = force
 end
 
 pro cloudviz_bridge::notifyColor, id, color, hub
-  print, 'color structure'
-  self.client1->setListen, 0
-  self.client2->setListen, 0
-
-  self.client1->setListen, 1
-  self.client2->setListen, 1
-
 end
 
 function cloudviz_bridge::init, hub1, hub2, match
