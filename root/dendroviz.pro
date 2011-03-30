@@ -1,4 +1,4 @@
-pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
+pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match
 
   if n_params() ne 1 then begin
      print, 'calling sequence'
@@ -31,7 +31,7 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
   endif
   
   if keyword_set(log) then (*ptr).height = alog10((*ptr).height)
-  if keyword_set(match_ppp) then begin
+  if keyword_set(match) then begin
      c_def = byte(transpose(fsc_color( $
              ['red', 'teal', 'orange', 'purple', 'yellow', 'brown', 'royalblue', 'green'], $
              /triple)))
@@ -53,8 +53,8 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
   hub->addClient, plot
   hub->addListener, listen
 
-  if keyword_set(match_ppp) then begin
-     hub2 = obj_new('cloudviz_hub', match_ppp.ptr, colors = c2)
+  if keyword_set(match) then begin
+     hub2 = obj_new('cloudviz_hub', match.ptr, colors = c2)
      panel2 = obj_new('cloudviz_panel', hub2, ppp = ppp)
      plot2 = obj_new('dendroplot', hub2)
      listen2 = obj_new('dendroviz_listener', hub2)
@@ -62,7 +62,7 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match_ppp = match_ppp
      hub2->addClient, panel2
      hub2->addClient, plot2
      hub2->addListener, listen2
-     bridge = obj_new('cloudviz_bridge', hub, hub2, match_ppp.match)
+     bridge = obj_new('cloudviz_bridge', hub, hub2, match.match)
      v2 = plot2->get_view()
      v2->setProperty, color=[254, 240, 230]
      v1 = plot->get_view()
