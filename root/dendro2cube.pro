@@ -31,7 +31,7 @@ function dendro2cube, ptr
      cube[(*ptr).x, (*ptr).y, (*ptr).v] = (*ptr).t
   endelse
   cube[ (*ptr).cubeindex ] = (*ptr).t
-;  assert, array_equal( cube[ (*ptr).x, (*ptr).y, (*ptr).v], (*ptr).t)
+  assert, array_equal( cube[ (*ptr).x, (*ptr).y, (*ptr).v], (*ptr).t)
   
   return, cube
 end
