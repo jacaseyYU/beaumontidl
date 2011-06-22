@@ -53,8 +53,8 @@
 ; MODIFICATION HISTORY:
 ;  March 2011: Written by Chris Beaumont
 ;-
-function match_dendro_2, ppp, ppv, v_cube, vcen, matrix = matrix, $
-                         mask_matrix = mask_matrix
+function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
+                       mask_matrix = mask_matrix
   if n_params() ne 4 then begin
      print, 'calling sequence'
      print, 'result = match_dendro(ppp, ppv, v_cube, vcen, '
@@ -144,7 +144,7 @@ function match_dendro_2, ppp, ppv, v_cube, vcen, matrix = matrix, $
      ppp_in_ppv[lo[0]:hi[0], lo[1]:hi[1], *] = proj
      ppp_norm = total(proj)
      assert, ppp_norm ne 0
-     assert, abs(ppp_norm - total(stamp)) lt total(stamp) * 1d-3
+     ;assert, abs(ppp_norm - total(stamp)) lt total(stamp) * 1d-3
 
      ;- make histogram of the ID's of overlapping PPV pixels
      hit = where(ppp_in_ppv ne 0, num_ppp)
@@ -178,6 +178,11 @@ function match_dendro_2, ppp, ppv, v_cube, vcen, matrix = matrix, $
         if sim2 gt .8 then print, n_elements(overlap), num_ppp, $
                                   ppv_norm_flat[j]
 
+        if sim1 le 0 || sim1 ge 1.001 || $
+           sim2 le 0 || sim2 ge 1.001 then begin
+           print, sim1, sim2
+        endif
+        
         assert, sim1 gt 0 && sim1 lt 1.001
         assert, sim2 gt 0 && sim2 lt 1.001
         
