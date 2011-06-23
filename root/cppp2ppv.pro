@@ -21,7 +21,7 @@ function cppp2ppv, ppp, vel, bincenters
   result = fltarr(sz[0], sz[1], nbin)
   junk = call_external(lib[0], 'ppp2ppv', $
                        ppp, vel, bincenters, $
-                       sz, nbin, result, /unload)
+                       sz, nbin, result)
   return, result
 end
 

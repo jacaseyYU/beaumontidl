@@ -10,7 +10,7 @@
 ; 
 ; KEYWORD PARAMETERS:
 ;  mask: An optional input mask array - image will be multiplied by
-;                                       mass before analysis
+;                                       mask before analysis
 ;  mean: On output, the mean, or center-of-mass, of the volume
 ;  moment: A 3x3 symmetric moment of inertia tensor
 ;  pmom: The 3 principal moments of inertia, listed in ascending
@@ -62,9 +62,10 @@ pro shape_stat3, image, $
   if n_elements(z) eq 0 then z = x * 0
 
   ;-the mean
-  ux = total(x * m) / total(m)
-  uy = total(y * m) / total(m)
-  uz = total(z * m) / total(m)
+  tm = total(m)
+  ux = total(x * m) / tm
+  uy = total(y * m) / tm
+  uz = total(z * m) / tm
   mean = [ux, uy, uz]
 
   ;-the moment of inertia tensor, about the mean

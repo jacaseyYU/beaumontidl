@@ -136,7 +136,7 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
                      ra[0], ra[1], ra[2])
      proj = cppp2ppv(stamp, vstamp, vcen)
 
-     assert, abs(total(proj) - total(stamp)) / (total(stamp) > 1d-30) lt 1e-2
+     ;assert, abs(total(proj) - total(stamp)) / (total(stamp) > 1d-30) lt 1e-2
      
      ;- insert cropped projection into correctly sized cube
      ppp_in_ppv[*] = 0
@@ -183,8 +183,8 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
            print, sim1, sim2
         endif
         
-        assert, sim1 gt 0 && sim1 lt 1.001
-        assert, sim2 gt 0 && sim2 lt 1.001
+        assert, sim1 ge 0 && sim1 lt 1.001
+        assert, sim2 ge 0 && sim2 lt 1.001
         
         similarity[i,j] = sim1
         similarity_mask[i,j] = sim2
