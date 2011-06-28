@@ -94,7 +94,7 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
   ppv_val[ (*ppv).cubeindex ] = (*ppv).t
 
   ppp_in_ppv = ppv_val * 0
-  nst_ppp = n_elements( (*ppp).height) + 1
+  nst_ppp = n_elements( (*ppp).height ) + 1
   assert, n_elements( (*ppp).cluster_label_h ) eq nst_ppp
 
   similarity = replicate(!values.f_nan, nst_ppp, nst_ppv)
