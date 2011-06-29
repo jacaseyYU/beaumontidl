@@ -25,6 +25,7 @@
 ;
 ; MODIFICATION HISTORY:
 ;  December 2010: Written by Chris Beaumont
+;  June 2011: Added support for inserting multiple elements at once
 ;-
 
 ;+
@@ -80,6 +81,12 @@ pro maxheap::insert, value
      return
   endif
      
+  if n_elements(value) gt 1 then begin
+     for i = 0, n_elements(value) - 1, 1 do $
+        self->insert, value[i]
+     return
+  endif
+
   v = self.vector
 
   ;- insert into bottom of tree. Swap with parent repeat up tree
