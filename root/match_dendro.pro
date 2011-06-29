@@ -70,6 +70,8 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
      size(*ppv, /type) ne 8 then $
         message, 'ppv does not point to a structure'
 
+  noassert = 0
+
   nst = n_elements( (*ppv).height )
   nst_ppv = nst
   nan = !values.f_nan
@@ -92,6 +94,11 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
   ppv_val = fltarr(ppv_sz[1], ppv_sz[2], ppv_sz[3])
   ppv_lab[ (*ppv).cubeindex ] = (*ppv).cluster_label
   ppv_val[ (*ppv).cubeindex ] = (*ppv).t
+
+  if min(ppv_val) lt 0 then begin
+     message, /con, 'Warning: PPV has negative values. Skipping sanity checks'
+     noassert = 1
+  endif
 
   ppp_in_ppv = ppv_val * 0
   nst_ppp = n_elements( (*ppp).height ) + 1
@@ -183,8 +190,12 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
            print, sim1, sim2
         endif
         
-        assert, sim1 ge 0 && sim1 lt 1.001
-        assert, sim2 ge 0 && sim2 lt 1.001
+        ;- these can be negative if input ppp/ppv
+        ;- have neg avlues
+        if not noassert then begin
+           assert, sim1 ge 0 && sim1 lt 1.001
+           assert, sim2 ge 0 && sim2 lt 1.001
+        endif
         
         similarity[i,j] = sim1
         similarity_mask[i,j] = sim2
