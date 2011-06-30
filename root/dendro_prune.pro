@@ -27,13 +27,18 @@ function _new_ptr, ptr, repoint, merge_list
   xloc = replicate(0., n_elements(h))
   height = xloc
 
+  nleaf = n_elements(merge_list) / 2 + 1
   for i = 0, n_elements(h) - 1, 1 do begin
      assert, h[i] ne 0
      ind = ri[ri[i] : ri[i+1]-1]
-     height[i] = max( (*ptr).height[ind])
-     xloc[i] = median( (*ptr).xlocation[ind])
+     if i lt nleaf then $
+        height[i] = max( (*ptr).height[ind]) $
+     else $
+        height[i] = min( (*ptr).height[ind] )
   end
      
+  xloc = layout_dendrogram(merge_list)
+
   cl = (*ptr).cluster_label
   for i = 0, n_elements(repoint) - 1, 1 do begin
      if repoint[i] eq i then continue
@@ -147,6 +152,7 @@ function dendro_prune, ptr, prune_list
   repoint = indgen(nst)
   nodes = _create_tree(ptr)
 
+  prune_list = prune_list[sort(prune_list)]
   for i = 0, np-1, 1 do begin
      id = prune_list[i]
      partner = nodes[id].partner
@@ -156,17 +162,21 @@ function dendro_prune, ptr, prune_list
         message, 'Cannot prune the root'
 
      l1 = leafward_mergers(id, (*ptr).clusters)
-     l2 = leafward_mergers(partner, (*ptr).clusters)
-
+     
      repoint[l1] = merged
-     repoint[l2] = merged
+     repoint[partner] = merged
 
-     nodes[merged].left = -1
-     nodes[merged].right = -1
+     nodes[merged].left = nodes[partner].left
+     nodes[merged].right = nodes[partner].right
+
+     if nodes[partner].left ne -1 then begin
+        nodes[nodes[partner].left].merged = merged
+        nodes[nodes[partner].right].merged = merged
+     endif
+
      nodes[l1].id = -1
-     nodes[l2].id = -1
+     nodes[partner].id = -1
   endfor
-
   merge_list = _new_mergelist(nodes, repoint)
   return, _new_ptr(ptr, repoint, merge_list)
 end
