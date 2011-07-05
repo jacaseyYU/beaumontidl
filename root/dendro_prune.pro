@@ -64,6 +64,10 @@ end
 
 ;-
 ; create a new mergelist, and update repoint
+;
+; nodes: The structure array describing the dendrogram.
+;  The pruned nodes should have id=-1. All of the references within
+;  the non-pruned nodes should point to other non-pruned nodes.
 ;-
 function _new_mergelist, nodes, repoint
 
@@ -72,30 +76,49 @@ function _new_mergelist, nodes, repoint
      repoint = repoint[repoint]
 
   good = where(nodes.id ne -1, nst)
-  assert, total(repoint[good] eq -1) eq 0
+
+  ;- non-pruned leavs should point to themselves
+  assert, total(repoint[good] ne good) eq 0
 
   leaves = where(nodes.id ne -1 and nodes.left eq -1, lct)
   branches = where(nodes.id ne -1 and nodes.left ne -1)
 
+  ;- new_ids will form a proper dendrogram sequence,
+  ;- with leaves occupying the first nleaf ids,
+  ;- and the branches occupying the final nbranch ids
   new_id = repoint * 0 - 1
   new_id[nodes[leaves].id] = indgen(lct)
 
+  ;- make sure number of non-pruned leaves
+  ;- consistent with non-pruned branches
   assert, 2 * lct - 1 eq nst
   result = intarr(2, lct - 1)
 
-  q = obj_new('maxheap')
-  q->insert, nodes[branches]
-
+  q = nodes[branches]
+  ;s = reverse(bsort(q.value))
+  ;q = q[s]
+  
   top = lct
-  while ~q->isEmpty() do begin
-     node = q->delete()
+  ;- visit branches in descending order
+  ;- height = merge point
+  for i = 0, n_elements(q) - 1, 1 do begin
+     node = q[i]
      print, node.id
      new_id[node.id] = top
-     assert, repoint[node.id] eq node.id
+
+     ;- left and right (leafward) children should be non-pruned
+     assert, nodes[node.left].id ne -1, 'Child of a non-pruned node is pruned'
+     assert, nodes[node.right].id ne -1, 'Child of non-pruned node is pruned'
+
+     ;- left and right (leafward) children should already have 
+     ;- been assigned new ids
+     assert, new_id[node.left] ge 0, 'Child of node not yet processed'
+     assert, new_id[node.right] ge 0, 'Child of node not yet processed'
+
      result[*, top - lct] = minmax(new_id[[node.left, node.right]])
-     assert, min(result[*, top-lct]) ge 0
+
      top++
-  endwhile
+  endfor
   assert, top eq nst
   assert, min(result) eq 0
 
@@ -105,7 +128,6 @@ function _new_mergelist, nodes, repoint
   new_id[redirected] = new_id[repoint[redirected]]
 
   assert, min(new_id) eq 0
-  obj_destroy, q
 
   repoint = new_id
   return, result
@@ -133,6 +155,9 @@ function _create_tree, ptr
      result[i].merged = m
      result[m].left = min([p, i])
      result[m].right = max([p, i])
+     if result[m].value gt min(result[[p,i]].value) then $
+        message, 'Bad tree: Merger brighter than leafwards: ' + $
+                 string(i, m, p, format='(i0, ", ", i0, ", ", i0)')
   endfor
   return, result
 end
