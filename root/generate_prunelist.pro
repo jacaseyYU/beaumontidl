@@ -1,7 +1,7 @@
 function generate_prunelist, ptr, count, delta = delta, npix = npix
 
   count = 0
-  if n_elements(delta) eq 0 && n_elements(nix) eq 0 then $
+  if n_elements(delta) eq 0 && n_elements(npix) eq 0 then $
      return, -1
 
   if ~keyword_set(delta) then delta = 0
@@ -11,6 +11,8 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
   kill = bytarr(nst)
   visited = bytarr(nst)
 
+  d_index = obj_new('dendro_index', ptr)
+
   l = get_leaves((*ptr).clusters)
   for i = 0, n_elements(l) - 1, 1 do begin
      print, i
@@ -19,7 +21,7 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
      repeat begin
         if visited[index] then break
         visited[index] = 1B
-        lm = leafward_mergers(index, (*ptr).clusters)
+        lm = d_index->leafward_mergers(index)
         p = merger_partner(index, (*ptr).clusters, merge = m)
         if p eq -1 then break
         np = total( (*ptr).cluster_label_h[lm] )
@@ -31,6 +33,7 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
      endrep until dokill
      visited[rootward_mergers(l[i], (*ptr).clusters)] = 1B
   endfor
-  
+  obj_destroy, d_index
+
   return, where(kill, count)
 end
