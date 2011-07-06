@@ -6,6 +6,7 @@
 ;
 ; INPUTS:
 ;  start: The name of a file to find dependencies for.
+;  count: On output, will hold the number of found dependencies.
 ;
 ; KEYWORD PARAMETERS:
 ;  only_source: If set, only return dependencies for which
@@ -30,13 +31,14 @@
 ; MODIFICATION HISTORY:
 ;  January 2011: Written by Chris Beaumont
 ;-
-function finddep_all, start, only_source = only_source, no_source = no_source
+function finddep_all, start, count, only_source = only_source, no_source = no_source
   compile_opt idl2
   on_error, 2
 
-  if n_params() ne 1 then begin
+  count = 0
+  if n_params() eq 0 || n_params() gt 2 then begin
      print, 'Calling sequence:'
-     print, 'result = finddep_all(start, [/only_source, /no_source])'
+     print, 'result = finddep_all(start, [count, /only_source, /no_source])'
      return, !values.f_nan
   endif
   
@@ -54,9 +56,9 @@ function finddep_all, start, only_source = only_source, no_source = no_source
   ;   return, 0
   ;endif
 
-  s = obj_new('stack')
-  h = obj_new('hashtable')
-  r = obj_new('hashtable')
+  s = obj_new('stack') ;- holds list of dependencies to resolve
+  h = obj_new('hashtable') ;- hold structure list of dependencies
+  r = obj_new('hashtable') ;- holds list of already-processed deps
 
   rec={func:'', source:''}
 
@@ -98,13 +100,13 @@ function finddep_all, start, only_source = only_source, no_source = no_source
   
   obj_destroy, [s, r]
   k = h->keys()
-  ct = h->count()
-  if ct eq 0 then begin
+  count = h->count()
+  if count eq 0 then begin
      obj_destroy, h
      return, rec
   endif
 
-  result = replicate(rec, n_elements(k))
+  result = replicate(rec, count)
   for i = 0, n_elements(k)-1 do result[i] = h->get(k[i])
 
   obj_destroy, h
@@ -112,13 +114,13 @@ function finddep_all, start, only_source = only_source, no_source = no_source
   s = sort(result.func)
   result = result[s]
   if keyword_set(only_source) then begin
-     good = where(result.source ne '', good_ct)
-     if good_ct ne 0 then result = result[good] $
+     good = where(result.source ne '', count)
+     if count ne 0 then result = result[good] $
      else result = rec
   endif
   if keyword_set(no_source) then begin
-     good = where(result.source eq '', good_ct)
-     if good_ct ne 0 then result = result[good] $
+     good = where(result.source eq '', good_count)
+     if count ne 0 then result = result[good] $
      else result = rec
   endif
      
