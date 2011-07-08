@@ -1,5 +1,12 @@
 function generate_prunelist, ptr, count, delta = delta, npix = npix
 
+  if n_params() ne 2 then begin
+     print, 'calling sequence'
+     print, 'result = generate_prunelist(ptr, count, '
+     print, '                           (delta = delta, npix = npix)'
+     return, !values.f_nan
+  endif
+
   count = 0
   if n_elements(delta) eq 0 && n_elements(npix) eq 0 then $
      return, -1
@@ -15,7 +22,6 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
 
   l = get_leaves((*ptr).clusters)
   for i = 0, n_elements(l) - 1, 1 do begin
-     print, i
      index = l[i]
      h = (*ptr).height[index]
      repeat begin

@@ -56,60 +56,81 @@ function finddep_all, start, count, only_source = only_source, no_source = no_so
   ;   return, 0
   ;endif
 
-  s = obj_new('stack') ;- holds list of dependencies to resolve
-  h = obj_new('hashtable') ;- hold structure list of dependencies
-  r = obj_new('hashtable') ;- holds list of already-processed deps
+  todo = obj_new('stack')            ;- holds list of dependencies to resolve
+  result_hash = obj_new('hashtable') ;- hold structure list of dependencies
+  done = obj_new('hashtable')           ;- holds list of already-processed deps
 
   rec={func:'', source:''}
 
+  ;- find dependencies, schedule them for processing
   dep = finddep_file(start, count, definition = d, defct = dct)
-  if count ne 0 then s->push, dep
+  if count ne 0 then todo->push, dep
 
-  for i = 0, dct - 1, 1 do $
-     h->add, d[i], {func:d[i], source:start}, /replace
+  ;- for each dependency, create an empty entry in result_hash
   for i = 0, count - 1, 1 do $
-     h->add, dep[i], {func:dep[i], source:''}, /replace
+     result_hash->add, dep[i], {func:dep[i], source:''}, /replace
   
-  while ~s->isEmpty() do begin
-     f = s->pop()
-     f = f[0]
-     
-     if r->iscontained(f) then continue
-     r->add, f, 1
+  ;- for each definition, create a full entry in result_hash
+  for i = 0, dct - 1, 1 do begin
+     result_hash->add, d[i], {func:d[i], source:start}, /replace
+     done->add, d[i]
+  endfor
 
-     entry = h->get(f)
+  ;- process the next dependency
+  while ~todo->isEmpty() do begin
+     func = todo->pop()
+     func = func[0]
+
+
+     ;- skip case 1-- already visited
+     if done->iscontained(func) then continue
+     done->add, func, 1
+
+     entry = result_hash->get(func)
      
-     if entry.source ne '' then continue
+     ;- sanity check -- can't get here if we've already
+     ;- resolved the dependency
+     assert, entry.source eq '', 'Already processed dependency'
      
      ;- guess at file
-     file = (file_which(f+'.pro'))[0]
+     file = (file_which(func+'.pro'))[0]
 
+     ;- skip case 2-- can't find source code
      if ~file_test(file) then continue
+
+     ;- process depdendencies for new file
      dep = finddep_file(file, count, definition = d, defct = dct)
      assert, size(dep, /type) eq 7
 
-     if count ne 0 then s->push, dep
+     ;- schedule new dependencies
+     if count ne 0 then todo->push, dep
      for i = 0, count - 1, 1 do begin
-        if h->iscontained(dep[i]) then continue
-        h->add, dep[i], {func:dep[i], source:''}, /replace
+        if result_hash->iscontained(dep[i]) then continue
+        result_hash->add, dep[i], {func:dep[i], source:''}, /replace
      endfor
 
-     for i = 0, dct - 1, 1 do $
-        h->add, d[i], {func:d[i], source:file}, /replace
+     ;- process new file definitions
+     for i = 0, dct - 1, 1 do begin
+        result_hash->add, d[i], {func:d[i], source:file}, /replace
+        done->add, d[i], 1
+     endfor
+
   endwhile
   
-  obj_destroy, [s, r]
-  k = h->keys()
-  count = h->count()
+  obj_destroy, [todo, done]
+
+  ;- convert hashtable to structure array
+  k = result_hash->keys()
+  count = result_hash->count()
   if count eq 0 then begin
-     obj_destroy, h
+     obj_destroy, result_hash
      return, rec
   endif
 
   result = replicate(rec, count)
-  for i = 0, n_elements(k)-1 do result[i] = h->get(k[i])
+  for i = 0, n_elements(k)-1 do result[i] = result_hash->get(k[i])
 
-  obj_destroy, h
+  obj_destroy, result_hash
 
   s = sort(result.func)
   result = result[s]
