@@ -43,8 +43,7 @@ function dendro_catalog, file, $
   if error ne 0 then begin
      catch, /cancel
      print, 'Could not convert file to pointer: '+file
-     print, !error_state.msg
-     return, !values.f_nan
+     message, !error_state.msg
   endif
   ptr = dendrocpp2idl(file)
   catch, /cancel

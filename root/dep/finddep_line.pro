@@ -28,6 +28,7 @@
 ;
 ; MODIFICATION HISTORY:
 ;  January 2011: Written by Chris Beaumont
+;  July 2011: Fixed bug when parsing tabs. cnb.
 ;-
 function finddep_line, linein, count = count, definition = definition
   if n_params() ne 1 then begin
@@ -41,7 +42,8 @@ function finddep_line, linein, count = count, definition = definition
   DEBUG = 0
 
   ;- tokenize string.
-  delim = ' .:~#$%^&*()-=+[{]}\|/?><,'
+  tab = string(9B)
+  delim = ' .:~#$%^&*()-=+[{]}\|/?><,' + tab
   s = strsplit(linein+' 0', delim)
   tokens = strsplit(linein+' 0', delim, /extract)
   tokens = strlowcase(tokens)
@@ -50,9 +52,12 @@ function finddep_line, linein, count = count, definition = definition
   d_old = ''
   inCurly = 0
 
+  quote = "'"
+  if DEBUG then print, "Processing line:     ", linein
   for i = 0, ns - 2, 1 do begin
      token = tokens[i]
-     if DEBUG then print, token
+     if DEBUG then print, i, quote, token, quote, $
+                          format='("Token ", i0, ": ", a1, a, a1)'
      dlen = s[i+1] - s[i] - strlen(token)
      delim = strmid(linein, s[i] + strlen(token), dlen)
      delim = strjoin(strsplit(delim, ' ', /extract))

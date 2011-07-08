@@ -1,3 +1,21 @@
+;+
+; PURPOSE:
+;  This procedure writes an array of ds9region structures (defined in
+;  the Beaumont IDL library) into a region file that ds9 undertands
+;
+; INPUTS:
+;  file: The name of the file to write to.
+;  regions: An array of ds9reg structures (see ds9reg__define.pro)
+;  system: The coordinate system to use. Choices are: PHYSICAL, IMAGE,
+;          FK4, B1950, FK5, J2000, GALACTIC, ECLIPTIC, ICRS
+;
+; RESTRICTIONS:
+;  Currently, only circle, ellipse, and box regions are supported by
+;  write_ds9reg. 
+;
+; MODIFICATION HISTORY:
+;  2010: Written by Chris Beaumont
+;-
 pro write_ds9reg, file, regions, system
 
   if n_params() ne 3 then begin
