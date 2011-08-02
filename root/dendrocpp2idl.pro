@@ -14,6 +14,7 @@ function dendrocpp2idl, file
   im =mrdfits(file, 0, h,/silent)
   id =mrdfits(file, 1, h,/silent)
   clusters = mrdfits(file, 2, h,/silent)
+  seeds = reform(mrdfits(file, 3, h, /silent))
 
   cv = dendrocpp2cloudviz(file)
   
@@ -34,7 +35,8 @@ function dendrocpp2idl, file
        height: (*cv).height, $
        cubeindex: ci, $
        x:x, y:y, v:v, $
-       szdata: size(im) $
+       szdata: size(im), $
+       seeds: seeds $
        }
 
   ptr_free, cv

@@ -12,6 +12,7 @@ function dendrocpp2cloudviz, file
   im =mrdfits(file, 0, h,/silent)
   id =mrdfits(file, 1, h,/silent)
   clusters = mrdfits(file, 2, h,/silent)
+  seeds = reform(mrdfits(file, 3, h,/silent))
 
   sz = size(clusters)
   start = (sz[2]+1)/2
@@ -30,7 +31,8 @@ function dendrocpp2cloudviz, file
        cluster_label_h:h, $
        cluster_label_ri:ri, $
        xlocation:xlocation, $
-       height:heights}
+       height:heights, $
+       seeds: seeds}
   
   ptr = ptr_new(st, /no_copy)
 
