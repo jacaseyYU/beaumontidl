@@ -15,6 +15,7 @@ function dendrocpp2idl, file
   id =mrdfits(file, 1, h,/silent)
   clusters = mrdfits(file, 2, h,/silent)
   seeds = reform(mrdfits(file, 3, h, /silent))
+  assert, array_equal(seeds[sort(seeds)], seeds), 'Seeds are not in sorted order!'
 
   cv = dendrocpp2cloudviz(file)
   
