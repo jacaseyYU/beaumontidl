@@ -65,7 +65,7 @@ pro create_board, l, w
            [1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1]]
   w = words
 
-  goto, finish
+;  goto, finish
 
   ;- regular board
   letters = [[1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1], $
