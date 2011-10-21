@@ -17,6 +17,7 @@ function dendrocpp2cloudviz, file
 
   sz = size(clusters)
   start = (sz[2]+1)/2
+  
   assert, max(clusters[*, start-1]) eq -1 && min(clusters[*,start]) ge 0
   clusters = clusters[*, (sz[2]+1) / 2 : *]
   nleaf = (sz[2]+1)/2
