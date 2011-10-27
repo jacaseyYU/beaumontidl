@@ -264,6 +264,14 @@ pro interwin::menu_event, event
      'View.3D rotation.Fix x axis':self->new_trackball, axis=0
      'View.3D rotation.Fix y axis':self->new_trackball, axis=1
      'View.3D rotation.Fix z axis':self->new_trackball, axis=2
+     'View.3D rotation.Set Rotation': begin
+        form = rotation_dialog()
+        if ~finite(form[0]) then return
+        self.model->rotate, [1,0,0], form[0]
+        self.model->rotate, [0,1,0], form[1]
+        self.model->rotate, [0,0,1], form[2]
+        self->request_redraw
+     end
      else: 
   endcase
 end
@@ -631,6 +639,7 @@ function interwin::init, model, $
                '0\Reset', $
                '1\3D rotation', $
                '0\reset', $
+               '0\Set Rotation', $
                '0\Fix x axis', $
                '0\Fix y axis', $
                '2\Fix z axis']
