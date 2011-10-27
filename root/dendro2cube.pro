@@ -13,6 +13,9 @@
 ; MODIFICATION HISTORY:
 ;  November 9 2010: Written by Chris Beaumont
 ;  March 2011: Output cube now has same size as original cube
+;  Oct 2011: Realized that the change in March 2011 is not always
+;  possible, as x,y,v can be out-of-bounds relative to origional
+;  cube. 
 ;-
 function dendro2cube, ptr
   if n_params() eq 0 then begin
@@ -22,16 +25,14 @@ function dendro2cube, ptr
   endif
 
   is2D = range((*ptr).v) eq 0
-  sz = (*ptr).szdata
+  sz = [0, max((*ptr).x)+1, max((*ptr).y) + 1, max((*ptr).v) + 1]
   if is2D then begin
      cube = fltarr(sz[1], sz[2])
-     cube[ (*ptr).x, (*ptr).y] = (*ptr).t
+     cube[(*ptr).x, (*ptr).y] = (*ptr).t
   endif else begin
      cube = fltarr(sz[1], sz[2], sz[3])
      cube[(*ptr).x, (*ptr).y, (*ptr).v] = (*ptr).t
   endelse
-  cube[ (*ptr).cubeindex ] = (*ptr).t
-  ;assert, array_equal( cube[ (*ptr).x, (*ptr).y, (*ptr).v], (*ptr).t)
-  
+
   return, cube
 end
