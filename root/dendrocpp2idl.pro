@@ -25,6 +25,7 @@ function dendrocpp2idl, file
   x = ind mod sz[1]
   y = (ind / sz[1]) mod sz[2]
   v = (sz[0] eq 3) ? (ind / (sz[1] * sz[2])) : ind*0
+  order = indgen(n_elements(seeds))
 
   st = {$
        t:(*cv).value, $
@@ -36,8 +37,11 @@ function dendrocpp2idl, file
        height: (*cv).height, $
        cubeindex: ci, $
        x:x, y:y, v:v, $
-       szdata: size(im), $
-       seeds: seeds $
+       szdata: sz, $
+       sz: sz, $
+       seeds: seeds, $
+       order: order, $
+       err: (*cv).value * 0 $
        }
 
   ptr_free, cv
