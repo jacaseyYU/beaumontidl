@@ -83,13 +83,13 @@ pro dendroplot::toggle_normplots
   self.baseplot = obj_new('idlgrplot', xy[0,*], xy[1,*])
   self.model->add, dendro
 
-  for i = 0, 7 do self->assignStructure, i, $
+  for i = 0, self.ncolor-1 do self->assignStructure, i, $
      self.hub->getStructure(i), /force
 end
 
 
 function dendroplot::init, hub, _extra = extra
-  result = self->dendroviz_client::init(hub)
+  result = self->dendroviz_client::init(hub, _extra=extra)
   if ~result then return, 0
   
   ptr = hub->getData()
@@ -127,7 +127,7 @@ pro dendroplot__define
           inherits dendroviz_client, $
           inherits interwin, $
           baseplot:obj_new(), $
-          plots:objarr(8), $
+          plots:objarr(30), $
           norm:0B, $
           listener_toggle:obj_new() $
          }

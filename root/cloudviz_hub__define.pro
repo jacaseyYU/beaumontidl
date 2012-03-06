@@ -403,7 +403,7 @@ pro cloudviz_hub::forceUpdate, single
   for i = 0, ct - 1, 1 do begin
      if ~obj_valid(clients[i]) then continue
      if obj_valid(single) && single ne clients[i] then continue
-     for j = 0, 7, 1 do begin
+     for j = 0, n_elements(self.structure_ids)-1, 1 do begin
         clients[i]->notifyStructure, j, self->getStructure(j), /force
      endfor
   endfor
@@ -453,15 +453,14 @@ function cloudviz_hub::init, ptr, colors = colors
 
   if keyword_set(colors) then begin
      sz = size(colors)
-     if sz[0] ne 2 || sz[1] ne 4 || sz[2] ne 8 then $
-        message, 'Colors keyword must be a [4,8] byte array'
-     self.colors = colors
+     if sz[0] ne 2 || sz[1] ne 4 then $
+        message, 'Colors keyword must be a [4,N] byte array'
+     self.colors[*,0:sz[2]-1] = colors
   endif else begin
      colors = byte(transpose(fsc_color( $
               ['red', 'teal', 'orange', 'purple', 'yellow', $
                'brown', 'royalblue', 'green'], /triple)))
-     assert, n_elements(colors[0,*]) eq 8
-     self.colors[0:2,*] = colors
+     self.colors[0:2,0:7] = colors
      self.colors[3,*] = 128B
   endelse
 
@@ -476,8 +475,8 @@ pro cloudviz_hub__define
           inherits IDL_CONTAINER, $
           listener:obj_new(), $ ;- cloudviz_listener object to process events
           data: ptr_new(), $    ;- cloud structure pointer
-          colors: bytarr(4, 8), $     ;- colors for each substructure mask
-          structure_ids: ptrarr(8), $ ;- substructure ids for each mask
+          colors: bytarr(4, 30), $     ;- colors for each substructure mask
+          structure_ids: ptrarr(30), $ ;- substructure ids for each mask
           currentID: 0, $             ;- currently-selected mask
           leader:obj_new(), $         ;- leader client
           isListening: 0B $           ;- are we processing events?

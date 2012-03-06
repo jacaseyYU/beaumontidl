@@ -1,5 +1,5 @@
-function cppp2ppv, ppp, vel, bincenters
-  
+function cppp2ppv, ppp, vel, bincenters, smear = smear, anti = anti
+
   if n_params() ne 3 then begin
      print, 'Calling sequence:'
      print, 'result = ppp2ppv(ppp, vel, bincenters, [dimension = dimension, /mask])'
@@ -13,15 +13,55 @@ function cppp2ppv, ppp, vel, bincenters
   sz = size(ppp)
   sz = long(sz[1:3])
   nbin = long(n_elements(bincenters))
-  
-  if size(ppp, /type) ne 4 then ppp = float(ppp)
-  if size(vel, /type) ne 4 then vel = float(vel)
-  if size(bincenters, /type) ne 4 then bincenters = float(bincenters)
-  
+
+  if keyword_set(anti) then begin
+     sz *= anti
+     nbin *= anti
+     _ppp = congrid(ppp, sz[0], sz[1], sz[2], cubic=-0.5)
+     _vel = congrid(vel, sz[0], sz[1], sz[2], cubic=-0.5)
+     _bincenters = arrgen(bincenters[0], bincenters[n_elements(bincenters)-1], $
+                          nstep = nbin)
+  endif else begin
+     _ppp = ppp
+     _vel = vel
+     _bincenters = bincenters
+  endelse
+
+  if size(_ppp, /type) ne 4 then _ppp = float(_ppp)
+  if size(_vel, /type) ne 4 then _vel = float(_vel)
+  if size(_bincenters, /type) ne 4 then _bincenters = float(_bincenters)
+
   result = fltarr(sz[0], sz[1], nbin)
   junk = call_external(lib[0], 'ppp2ppv', $
-                       ppp, vel, bincenters, $
+                       _ppp, _vel, _bincenters, $
                        sz, nbin, result)
+
+  if keyword_set(anti) then begin
+     sz /= anti
+     nbin /= anti
+     ;result = congrid(result, sz[0], sz[1], nbin, cubic=-0.5)
+  endif
+
+  if keyword_set(smear) then begin
+     nonneg = min(result) ge 0
+     dv = abs(bincenters[1] - bincenters[0])
+     fwhm = smear / dv
+     npix = ceil(3 * fwhm) / 2 * 2 + 1
+     psf = psf_gaussian(npixel = npix, fwhm = fwhm)
+     ;- only central column is nonzero
+     s = size(psf)
+     psf[0:s[1] / 2 - 1, *] = 0
+     psf[s[1] / 2 + 1:*, *] = 0
+     psf = psf[s[1]/2 - 1: s[1]/2 + 1, *]
+     psf /= total(psf, /double)
+     for i = 0, sz[0] - 1, 1 do begin
+        plane = reform(result[i, *, *])
+        plane = convolve(plane, psf, ft_psf = ft_psf)
+        ;stop
+        result[i, *, *] = plane
+     endfor
+     if nonneg then result >= 0
+  endif
   return, result
 end
 

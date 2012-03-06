@@ -31,7 +31,7 @@
 ;
 ; OUTPUTS:
 ;  0
-;-  
+;-
 function cloudiso::event, event
   super = self->interwin::event(event)
   if event.id eq self.slider then begin
@@ -39,7 +39,19 @@ function cloudiso::event, event
      s = self.hub->getCurrentStructure()
      i = self.hub->getCurrentID()
      self->notifyStructure, i, s, /force
+  endif else if event.id eq self.scale_slider then begin
+     widget_control, self.scale_slider, get_value = val
+     widget_control, self.scale_form, set_value = strtrim(val, 2)
+     self.scale[2] = val
+     self->mergeIsos
+  endif else if event.id eq self.scale_form then begin
+     widget_control, self.scale_form, get_value = val
+     val = float(val)
+     widget_control, self.scale_slider, set_value = val
+     self.scale[2] = val
+     self->mergeisos
   endif
+
   if size(super, /tname) eq 'STRUCT' then self.hub->receiveEvent, super
 
 ;  self->update_axes
@@ -51,7 +63,7 @@ end
 ;+
 ; PURPOSE:
 ;  Used by the hub to notify this mudle about a new substructure to
-;  visualize. 
+;  visualize.
 ;
 ; INPUTS:
 ;  index: The index (0-7) of the structure to render
@@ -64,7 +76,7 @@ end
 ;-
 pro cloudiso::notifyStructure, index, structure, force = force
   if ~keyword_set(force) then return
-  
+
   self->recalculateIso, index, structure
   self->mergeIsos
   self->request_redraw
@@ -83,8 +95,8 @@ end
 pro cloudiso::recalculateIso, index, structure
   obj_destroy, self.sub_isos[index]
   ptr = self.hub->getData()
-  
-  
+
+
   ind = substruct(structure, ptr, /single)
   if min(structure) lt 0 then return
   if n_elements(ind) lt 5 then return
@@ -108,7 +120,7 @@ pro cloudiso::recalculateIso, index, structure
   widget_control, self.slider, get_value = lev
   self.slider_val[index] = lev
   lev = r[0 > (lev * n_elements(r)) < (n_elements(r)-1)]
-  
+
   ;- turn cube into isosurface
   if size(cube, /n_dim) ne 3 then return
   isosurface, cube, lev, v, c
@@ -134,12 +146,16 @@ pro cloudiso::mergeIsos
   offset = 0L
   self.model->remove, self.merged
   obj_destroy, self.merged
-  for i = 0, 7 do begin
+  for i = 0, self.ncolor-1 do begin
      o = self.sub_isos[i]
      if ~obj_valid(o) then continue
      o->getProperty, color = col, alpha = a, data = v, poly = c
-     
-     v[0,*] *= self.scale[0] & v[1,*] *= self.scale[1] & v[2,*] *= self.scale[2]
+
+     cen = self.sz / 2
+     v[0,*] = (v[0,*] - cen[0]) * self.scale[0] + cen[0]
+     v[1,*] = (v[1,*] - cen[1]) * self.scale[1] + cen[1]
+     v[2,*] = (v[2,*] - cen[2]) * self.scale[2] + cen[2]
+
      if n_elements(verts) eq 0 then verts = v else $
         verts = [[verts], [v]]
      nv = n_elements(v[0,*])
@@ -149,12 +165,12 @@ pro cloudiso::mergeIsos
      c[ind+3] += offset
      offset += nv
      conn = append(conn, c)
-     
+
      new = byte(rebin([col, 255*a], 4, nv))
      if n_elements(colors) eq 0 then colors = new $
      else colors = [[colors], [new]]
   endfor
-  
+
   if n_elements(verts) eq 0 then return
   self.merged = obj_new('idlgrpolygon', verts, poly = conn, $
                         vert_colors = colors)
@@ -195,20 +211,27 @@ pro cloudiso::cleanup
   self->cloudviz_client::cleanup
 end
 
-function cloudiso::init, hub
-  if ~self->cloudviz_client::init(hub) then return, 0
+pro cloudiso::set_zscale, scale
+  self.scale[2] = scale
+end
+
+function cloudiso::init, hub, zscale = zscale, _extra = extra
+  if ~self->cloudviz_client::init(hub, _extra = extra) then return, 0
 
   ptr = hub->getData()
   sz = size((*ptr).cluster_label)
   if sz[0] ne 3 then $
      message, 'Data within hub is not a 3D cube'
-  
+
+  self.sz = sz[1:3]
   ;- determine bounding box
   xra = [0, sz[1]]
   yra = [0, sz[2]]
   zra = [0, sz[3]]
-  
+
   self.scale = [1., 1., 1. * (sz[1] + sz[2]) /2. / sz[3]]
+  if keyword_set(zscale) then self.scale[2] = zscale
+
   self.xcen = mean(xra) & self.ycen = mean(yra) & self.zcen = mean(zra)
 
   zra = [min([xra, yra, zra], max=hi), hi]
@@ -226,17 +249,17 @@ function cloudiso::init, hub
   model->add, l1
   model->add, l2
   model->add, l3
-  
+
   ;- axis objects
   for i = 0, 3, 1 do begin
      self.axes[i] = obj_new('idlgraxis', 0, range=[0, sz[1]], $
                             loc=[0, sz[2] * (i / 2), sz[3] * (i mod 2)], maj=0, min=0, $
                             thick=2, /exact, color=[255,255,255])
-     
+
      self.axes[4 + i] = obj_new('idlgraxis', 1, range=[0, sz[2]], $
                                 loc=[sz[1] * (i/2), 0, sz[3] * (i mod 2)], maj=0, min=0, $
                                 thick=2, /exact, color=[255,255,255])
-     
+
      self.axes[8 + i] = obj_new('idlgraxis', 2, range=[0, sz[3]], thick=2, $
                                 loc=[sz[1] * (i/2), sz[2] *(i mod 2), 0], maj=0, min=0, /exact, $
                                 color=[255,255,255])
@@ -247,7 +270,7 @@ function cloudiso::init, hub
   self.axes[0]->setProperty, title=obj_new('idlgrtext', 'X', color=[255,255,255])
   self.axes[4]->setProperty, title=obj_new('idlgrtext', 'Y', color=[255,255,255])
   self.axes[8]->setProperty, title=obj_new('idlgrtext', 'Z', color=[255,255,255])
-  
+
   result = self->interwin::init(model, $
                                 bgcolor=byte([20, 20, 20]), $
                                 xra = xra, yra = yra, zra = zra, $
@@ -257,6 +280,11 @@ function cloudiso::init, hub
   self.widget_base = self.base
   self->set_rotation_center, sz[1:3]/2.
   self.slider = cw_fslider(self.base, min = 0., max = 1., value = 0.0)
+  default_stretch = 1.0
+  row = widget_base(self.base, /row)
+  self.scale_slider = cw_fslider(row, min = 0, max = 2.0, $
+                                 value = default_stretch)
+  self.scale_form = widget_text(row, /edit, value = strtrim(default_stretch, 2))
   self.slider_val[*] = 0.0
   return, 1
 end
@@ -265,12 +293,15 @@ pro cloudiso__define
   data = {cloudiso, $
           inherits cloudviz_client, $
           inherits interwin, $
-          sub_isos:objarr(8), $
-          slider_val:fltarr(8), $
+          sub_isos:objarr(30), $
+          slider_val:fltarr(30), $
           axes:objarr(12), $
           xcen:0., ycen:0., zcen:0., $
           merged:obj_new(), $
           scale:[1., 1., 1.], $
-          slider:0L $
+          slider:0L, $
+          scale_slider:0L, $
+          scale_form:0L, $
+          sz: lonarr(3) $
          }
 end

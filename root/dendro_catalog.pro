@@ -3,22 +3,23 @@
 ;  Measure several properties about each structure in a dendrogram
 ;
 ; INPUTS:
-;  file: The file name to read. Must be a c++-generated dendrogram
-;  
+;   arg: Either a string naming a C++ generated dendrogram file,
+;        or a pointer to an IDL-generated dendrogram
+;
 ; KEYWORD PARAMETERS:
-;  len_scale: physical size of each pixel
-;  vel_scale: velocity channel width
-;  flux2mass: Multiply by this factor to convert flux to mass
+;  len_scale: physical size of each pixel, in pc
+;  vel_scale: velocity channel width, in km/s
+;  flux2mass: Multiply by this factor to convert intensity to mass in M_sun
 ;
 ; OUTPUTS:
 ;  A catalog with the following tags:
 ;    sig_maj -- 2nd moment about the first principal axis, when shape
-;               is projected onto 2D sky
+;               is projected onto 2D sky. Units are pixels or pc
 ;    sig_min -- 2nd moment about the second principal axis, when shape
-;               is projected onto 2D sky
-;    sig_v   -- 2nd moment of velocity
-;    sig_r   -- sqrt(sig_maj * sig_min)
-;    flux    -- integrated flux
+;               is projected onto 2D sky. Units are pixels or pc
+;    sig_v   -- 2nd moment of velocity. Units are km/s
+;    sig_r   -- sqrt(sig_maj * sig_min). Units are pixels or pc
+;    flux    -- integrated flux.
 ;    vol     -- voxel volume of structure
 ;    virial  -- virial parameter estimated from sig_r, sig_v, flux,
 ;               and flux2mass
@@ -26,27 +27,34 @@
 ; MODIFICATION HISTORY:
 ;  Jan 2011: Written by Chris Beaumont
 ;-
-function dendro_catalog, file, $
+function dendro_catalog, arg, $
                          len_scale = len_scale, vel_scale = vel_scale, $
                          flux2mass = flux2mass
 
   if n_params() ne 1 then begin
      print, 'calling sequence:'
-     print, ' result = dendro_catalog(ptr, [len_scale = len_scale, '
+     print, ' result = dendro_catalog(file/ptr, [len_scale = len_scale, '
      print, '                         vel_scale = vel_scale, flux2mass = flux2mass])'
      return, !values.f_nan
   endif
-  if ~file_test(file) then $
-     message, 'Cannot find dendrogram file: ', file
 
-  catch, error
-  if error ne 0 then begin
+  if size(arg, /tname) eq 'STRING' then begin
+     file = arg
+     if ~file_test(file) then $
+        message, 'Cannot find dendrogram file: ', file
+
+     catch, error
+     if error ne 0 then begin
+        catch, /cancel
+        print, 'Could not convert file to pointer: '+file
+        message, !error_state.msg
+     endif
+     ptr = dendrocpp2idl(file)
      catch, /cancel
-     print, 'Could not convert file to pointer: '+file
-     message, !error_state.msg
-  endif
-  ptr = dendrocpp2idl(file)
-  catch, /cancel
+  endif else if size(arg, /tname) eq 'POINTER' then begin
+     ptr = arg
+  endif else $
+     message, 'Input must be a string or a pointer'
 
   if ~keyword_set(len_scale) then len_scale = 1
   if ~keyword_set(vel_scale) then vel_scale = 1
@@ -54,9 +62,11 @@ function dendro_catalog, file, $
 
   nst = n_elements( (*ptr).height )
 
-
   nan = !values.f_nan
-  rec = {sig_maj:nan, $
+  rec = {x: nan, $
+         y: nan, $
+         v: nan, $
+         sig_maj:nan, $
          sig_min:nan, $
          sig_v:nan, $
          sig_r:nan, $
@@ -74,9 +84,17 @@ function dendro_catalog, file, $
      if ct eq 0 then continue
 
      x = (*ptr).x[ind]
-     y = (*ptr).y[ind] 
-     v = (*ptr).v[ind] 
+     y = (*ptr).y[ind]
+     v = (*ptr).v[ind]
      t = (*ptr).t[ind]
+     if total(t, /double) le 0 then begin
+        print, 'Integrated flux is negative. Skipping structure ' + strtrim(i, 2)
+        continue
+     endif
+
+     data[i].x = total( x * t, /double) / total(t, /double)
+     data[i].y = total( y * t, /double) / total(t, /double)
+     data[i].v = total( v * t, /double) / total(t, /double)
 
      stamp = dblarr( range(x)+2, range(y)+2, range(v) + 2)
      stamp[ x- min(x), y - min(y), v - min(v) ] = t
@@ -101,7 +119,7 @@ function dendro_catalog, file, $
      ax1 = reform(paxis[*,0] * [1,1,0])
      if max(abs(ax1)) eq 0 then ax1 = [1,0]
      ax1 /= sqrt( total(ax1^2) )
-     
+
      ;- project (xy) onto the major/minor axes in XY plane
      p_maj = ix * ax1[0] + iy * ax1[1]
      p_min = (-1) * ix * ax1[1] + iy * ax1[0]
@@ -150,7 +168,7 @@ function dendro_catalog, file, $
      data[i].vol_right = lo
   endfor
 
-  ptr_free, ptr
+  if size(arg, /tname) eq 'STRING' then ptr_free, ptr
   return, data
 end
-  
+

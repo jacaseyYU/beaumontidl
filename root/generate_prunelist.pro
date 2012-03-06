@@ -1,4 +1,5 @@
-function generate_prunelist, ptr, count, delta = delta, npix = npix
+function generate_prunelist, ptr, count, delta = delta, npix = npix, $
+                             minflux = minflux, minpeak = minpeak
 
   if n_params() ne 2 then begin
      print, 'calling sequence'
@@ -13,6 +14,8 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
 
   if ~keyword_set(delta) then delta = 0
   if ~keyword_set(npix) then npix = 0
+  if ~keyword_set(minflux) then minflux = -!values.f_infinity
+  if ~keyword_set(minpeak) then minpeak = -!values.f_infinity
 
   nst = n_elements((*ptr).height)
   kill = bytarr(nst)
@@ -21,6 +24,8 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
   d_index = obj_new('dendro_index', ptr)
 
   l = get_leaves((*ptr).clusters)
+  ;- for each leaf, travel rootward until prune test fails,
+  ;- or we re-visit a node
   for i = 0, n_elements(l) - 1, 1 do begin
      index = l[i]
      h = (*ptr).height[index]
@@ -29,14 +34,18 @@ function generate_prunelist, ptr, count, delta = delta, npix = npix
         visited[index] = 1B
         lm = d_index->leafward_mergers(index)
         p = merger_partner(index, (*ptr).clusters, merge = m)
-        if p eq -1 then break
+        if p eq -1 then break ;- don't prune the root
         np = total( (*ptr).cluster_label_h[lm] )
         de = (h - (*ptr).height[m])
-        dokill = np lt npix || de lt delta
-        
+        ind = substruct(index, ptr)
+        dokill = np lt npix || de lt delta || $
+                 total((*ptr).t[ind]) lt minflux || $
+                 max( (*ptr).t[ind] ) lt minpeak        
         kill[index] = dokill
         index = m
-     endrep until dokill
+     endrep until dokill eq 0
+     ;- all structures rootward of a non-pruned structure
+     ;- are implicitly safe from pruning
      visited[rootward_mergers(l[i], (*ptr).clusters)] = 1B
   endfor
   obj_destroy, d_index
