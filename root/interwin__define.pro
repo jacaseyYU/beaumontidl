@@ -31,13 +31,13 @@
 ;  coordinates), whether the mouse is clicking/dragging, pressing a
 ;  key, etc. This event structure can be used by subclasses to create
 ;  custom interactions, without having to parse widget events
-;  directly. 
+;  directly.
 ;
 ; HOW TO PROGRAMATICALLY UPDATE THE DISPLAY:
 ;  If a subclass or other program wants to update the graphics display
 ;  programatically, they should either
 ;   1) set the DRAW instance variable to 1 (if a subclass), or
-;   2) call the request_redraw procedure. 
+;   2) call the request_redraw procedure.
 ;
 ;  Other programs should not call the REDRAW procedure
 ;  directly. Interwin checks to make sure it doesn't update the
@@ -135,6 +135,25 @@ pro interwin::set_rotation_center, center
   self->request_redraw
 end
 
+pro interwin::set_label, x, y, z, _extra = extra
+  if ptr_valid(self.header) then begin
+     if self.is3D then begin
+        xyzadv, *self.header, x, y, z, a, d, v
+     endif else begin
+        xyad, *self.header, x, y, a, d
+     endelse
+  endif else begin
+     a = x
+     d = y
+     if self.is3D then v = z
+  endelse
+  string = string(a, d, $
+                  format='("x: ", e0.2, "  y: ", e0.2)')
+  if self.is3D then string += string(v, format='("  z: ",e0.2)')
+
+  self->update_info, string
+end
+
 function interwin::event, event
   ;- widget timer events tell us when to update display
   if tag_names(event, /structure_name) eq 'WIDGET_TIMER' then begin
@@ -183,11 +202,7 @@ function interwin::event, event
                   event.y ge g.scr_ysize
         junk = win->pickdata(self.view, self.model, [event.x, event.y], $
                              xyz)
-        
-        string = string(xyz[0], xyz[1], $
-                        format='("x: ", e0.2, "  y: ", e0.2)')
-        if self.is3D then string += string(xyz[2], format='("  z: ",e0.2)')
-        self->update_info, string
+        self->set_label, xyz[0], xyz[1], xyz[2]
         haveTransform = self.trackball->update(event, transform=qmat)
         info = {win:win, g:g, outside:outside, xyz:xyz, haveTransform:haveTransform, $
                 qmat:haveTransform ? qmat : 0, hit:junk}
@@ -207,7 +222,7 @@ function interwin::event, event
      end
      else: return, 1
   endcase                       ;- end of event identification
-  
+
   ;-pass information up the hierarchy
   result = {interwin_event, ID: event.handler, TOP: event.top, HANDLER:0L, $
             x:xyz[0], y:xyz[1], $
@@ -234,7 +249,7 @@ pro interwin::menu_event, event
         result = dialog_write_image(out, file='image.png', type='PNG', options = o, $
                                     dialog_parent = self.base, /warn_exist)
         ;- by default, TIFF files write upside-down. Fix this.
-        if o.type eq 'TIFF' then write_tiff, o.filename, reverse(out, 3) 
+        if o.type eq 'TIFF' then write_tiff, o.filename, reverse(out, 3)
      end
      'File.Save view': begin
         file=dialog_pickfile(default_extension='vew', $
@@ -272,7 +287,7 @@ pro interwin::menu_event, event
         self.model->rotate, [0,0,1], form[2]
         self->request_redraw
      end
-     else: 
+     else:
   endcase
 end
 
@@ -298,7 +313,7 @@ end
 pro interwin::button_release_event, event
   if self.l_drag && self.doRotate then self->toggleWireframe
   wasL = self.l_drag eq 1B
-  self.l_drag = 0B  
+  self.l_drag = 0B
   self.r_drag = 0B
   if self.updatePolys then self->updatePolys
   if self.doRescale && wasL then begin
@@ -317,7 +332,7 @@ pro interwin::button_release_event, event
         if self.isImage then magnify[1] = magnify[0]
         self.view_cen += delta
         self.view_wid *= magnify
-        self->update_viewplane      
+        self->update_viewplane
      endif
   endif
 end
@@ -326,9 +341,9 @@ pro interwin::button_motion_event, event, info
   if ~self.l_drag && ~self.r_drag then return
   if (self.modifiers ne 0) && $
      (event.modifiers and self.modifiers) eq 0 then return
-  
+
   self.redraw = 1
-  
+
   ;-rotating, translate, or rescale?
   if self.doRotate then begin
      if info.haveTransform ne 0 then begin
@@ -343,7 +358,7 @@ pro interwin::button_motion_event, event, info
      delta = [event.x, event.y] - self.anchor
      g1 = widget_info(self.draw, /geom)
      delta = delta / [g1.xsize, g1.ysize] * self.view_wid
-     
+
   ;- left mouse dragging pans
      if self.l_drag then begin
         self.view_cen = self.view_cen - delta
@@ -356,20 +371,20 @@ pro interwin::button_motion_event, event, info
                           [event.x, event.y], xyz1)
      junk = info.win->pickdata(self.view, self.rescale_model, $
                           self.anchor, xyz2)
-     
+
      ;- if this is an image, preserve the aspect ratio
      if self.isImage then xyz1[1] = xyz2[1] + (xyz1[0] - xyz2[0]) * $
                                     self.view_wid[1]/self.view_wid[0] * $
                                     sign(xyz1[1] - xyz2[1])
-     
+
      x = [xyz1[0], xyz2[0], xyz2[0], xyz1[0], xyz1[0]]
      y = [xyz1[1], xyz1[1], xyz2[1], xyz2[1], xyz1[1]]
      if x[0] lt x[1] then x*=!values.f_nan
-     
+
      self.rescale_plot->setProperty, $
         datax= x, datay = y
   endif
-  
+
   ;- right mouse drag stretches an image
   if self.r_drag && self.isImage && ~info.outside then begin
      g = widget_info(self.draw, /geom)
@@ -386,7 +401,7 @@ pro interwin::keyboard_event, event
      'T': self->setButton, /translate
      'Y': self->setButton, /resize
      else:
-  endcase         
+  endcase
 end
 
 pro interwin::setButton, translate = translate, rotate = rotate, resize = resize
@@ -555,6 +570,7 @@ end
 pro interwin::cleanup
   obj_destroy, self.view
   obj_destroy, self.trackball
+  ptr_free, self.header
   tlb = self.base
   if widget_info(tlb, /valid_id) then $
      widget_control, tlb, /destroy
@@ -587,6 +603,7 @@ function interwin::init, model, $
                          group_leader = group_leader, $
                          bgcolor = bgcolor, $
                          title = title, $
+                         header = header, $
                          _extra = extra
 
   if n_params() eq 0 || ~obj_valid(model) || ~obj_isa(model, 'IDLGRMODEL') then begin
@@ -621,7 +638,7 @@ function interwin::init, model, $
   base = widget_base(event_func='interwin_event', notify_realize='interwin_realize', /col, frame = 3, $
                      /tlb_size_events, group_leader = group_leader, mbar = mbar, $
                      xoffset = xoffset, yoffset = yoffset, title = title)
-  
+
   ;- a dummy base to hold the uvalue
   dummy = widget_base(base)
 
@@ -645,7 +662,7 @@ function interwin::init, model, $
                '2\Fix z axis']
   menu = cw_pdmenu(mbar, menu_desc, /mbar, /return_full_name)
   widget_control, mbar, set_uvalue='mbar'
-  
+
   ;-button bar
   file = file_which('move.bmp')
   if ~file_test(file) then message, 'cannot find move.bmp'
@@ -692,7 +709,7 @@ function interwin::init, model, $
   if ~keyword_set(image) then begin
      xsize = 500 & ysize = 500
   endif
-  
+
   draw = widget_draw(base3, xsize = xsize, ysize = ysize, graphics_level = 2, $
                      /button_events, /wheel_events, /motion_events, $
                      keyboard_events = 2, $
@@ -719,12 +736,17 @@ function interwin::init, model, $
   self.redraw = 1
   self.label = label
 
+  if keyword_set(header) then begin
+     if size(header, /type) eq 10 then self.header = header else $
+        self.header = ptr_new(header)
+  endif
+
   if self.isImage then self.image = image
 
   child = widget_info(base, /child)
   widget_control, child, set_uvalue = self, $
                   kill_notify='interwin_kill'
-  
+
 
   return, 1
 end
@@ -743,7 +765,7 @@ pro interwin__define
           view:obj_new(), $      ;- view object. Created during init
           trackball:obj_new(),$  ;- trackball to handle translation/rotation
           image:obj_new(), $     ;- the CNBgrImage object, if isImage is true
-          
+
           ;-widgets
           base:0L, $            ;- root of the interwin widget hierarchy
           mbar:0L, $            ;- widget base for menubar
@@ -766,7 +788,7 @@ pro interwin__define
           ;- rescale objects. Used to draw a box when rescaling
           rescale_model:obj_new(), $
           rescale_plot:obj_new(), $
-  
+
           ;- bit flags
           doRotate:0B, $        ;- mouse motion rotates?
           doTranslate:0B, $     ;- mouse motion translates?
@@ -791,23 +813,26 @@ pro interwin__define
           rot_cen:dblarr(3), $  ;- pivot point when rotating
 
           anchor:[0., 0.], $    ;- cursor pos at start of drag
-          last_render:0D $      ;- systime of last render
+          last_render:0D, $      ;- systime of last render
+
+          ;- metadata
+          header:ptr_new() $
          }
 end
-          
+
 pro test_im
 
   x = arrgen(1., 10., .1)
   y = sin(x)
-  
+
 ;  plot = obj_new('idlgrplot', x, y)
   plot = obj_new('cnbgrimage', bytscl(dist(255)))
   model = obj_new('idlgrmodel')
   xrange = [0,255]
   yrange = [0,255]
   model->add, plot
-  
-  x = obj_new('interwin', model, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard)  
+
+  x = obj_new('interwin', model, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard)
   x->run
 end
 
@@ -826,7 +851,7 @@ pro test_embed
 
   x = arrgen(1., 10., .1)
   y = sin(x)
-  
+
   plot = obj_new('idlgrplot', x, y)
   model = obj_new('idlgrmodel')
   xrange = [0,11]
@@ -851,32 +876,32 @@ pro test3d
   oTop->Add, oGroup
 
   zData = BESELJ(SHIFT(DIST(40),20,20)/2,0)
-  
+
   sz = SIZE(zData)
   zMax = MAX(zData, MIN=zMin)
 
   xMax = sz[1] - 1
   yMax = sz[2] - 1
   zMin2 = zMin - 1
-  zMax2 = zMax + 1 
+  zMax2 = zMax + 1
 
   ; Compute coordinate conversion to normalize.
 ;  xs = [-0.5,1.0/xMax]
 ;  ys = [-0.5,1.0/yMax]
 ;  zs = [(-zMin2/(zMax2-zMin2))-0.5, 1.0/(zMax2-zMin2)]
-  
+
   oSurface = OBJ_NEW('IDLgrSurface', zData, STYLE=2, SHADING=0, $
                      COLOR=[60,60,255], BOTTOM=[64,192,128], $
                      XCOORD_CONV=xs, YCOORD_CONV=ys, ZCOORD_CONV=zs)
   oGroup->Add, oSurface
-  
+
   ; Create some lights.
   oLight = OBJ_NEW('IDLgrLight', LOCATION=[2,2,2], TYPE=1)
   oTop->Add, oLight
   oLight = OBJ_NEW('IDLgrLight', TYPE=0, INTENSITY=0.5)
   oTop->Add, oLight
-  
-  ; Place the model in the view.  
+
+  ; Place the model in the view.
   x = obj_new('interwin', oTop, image = plot, xrange=xrange, yrange = yrange, /standalone, /keyboard, /rotate  )
   x->run
 end

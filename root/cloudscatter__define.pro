@@ -119,7 +119,7 @@ pro cloudscatter::updatePlots, recenter = recenter
   self.baseplot->setProperty, datax = x, datay = y
 
   
-  for i = 0, 7, 1 do self->updateSubplot, i
+  for i = 0, self.ncolor-1, 1 do self->updateSubplot, i
   if keyword_set(recenter) then self->recenter
 
   self->request_redraw
@@ -226,7 +226,7 @@ pro cloudscatter::resizePoints
 
   s->setProperty, size=sz
 
-  for i = 0, 7, 1 do begin
+  for i = 0, self.ncolor-1, 1 do begin
      if ~obj_valid(self.subplots[i]) then continue
      self.subplots[i]->getProperty, symbol = s
      s->setProperty, size=sz
@@ -289,9 +289,9 @@ pro cloudscatter::cleanup
 end
 
 
-function cloudscatter::init, hub, data
+function cloudscatter::init, hub, data, _extra = extra
 
-  if ~self->cloudviz_client::init(hub) then return, 0
+  if ~self->cloudviz_client::init(hub, _extra = extra) then return, 0
   if size(data, /type) ne 8 then $
      message, 'data must be a structure!'
 
@@ -306,7 +306,7 @@ function cloudscatter::init, hub, data
   plot = obj_new('idlgrplot', $
                  data.(0), data.(1), symbol = symbol, linestyle = 6)
   
-  for i = 0, 7, 1 do begin
+  for i = 0, self.ncolor-1, 1 do begin
      self.subplots[i] = obj_new('idlgrplot', $
                                 [!values.f_nan], $
                                 [!values.f_nan], $
@@ -328,7 +328,10 @@ function cloudscatter::init, hub, data
   model->add, xaxis
   model->add, yaxis
   model->add, plot
-  for i = 0, n_elements(self.subplots) -1 do model->add, self.subplots[i], pos = 2
+  for i = 0, n_elements(self.subplots) -1 do begin
+     if ~obj_valid(self.subplots[i]) then continue
+     model->add, self.subplots[i], pos = 2
+  endfor
 
   self.baseplot = plot
   
@@ -377,7 +380,7 @@ pro cloudscatter__define
           data:ptr_new(), $
           varlists:[0L, 0L], $
           baseplot:obj_new(), $
-          subplots:objarr(8), $
+          subplots:objarr(30), $
           axes:objarr(2), $
           axtitle:objarr(2), $
           xlog:0B, $

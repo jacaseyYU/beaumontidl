@@ -62,7 +62,7 @@ function cloudviz_client::getWidgetBase
   return, self.widget_base
 end
 
-function cloudviz_client::init, hub
+function cloudviz_client::init, hub, ncolor = ncolor, _extra = extra
   if n_params() ne 1 then begin
      print, 'calling sequence'
      print, 'obj = obj_new("cloudviz_client", hub)'
@@ -72,6 +72,8 @@ function cloudviz_client::init, hub
   if n_elements(hub) ne 1 || ~obj_isa(hub, 'cloudviz_hub') $
      then message, 'hub is not a valid cloudviz hub object'
 
+  if ~keyword_set(ncolor) then ncolor = 8
+  self.ncolor = ncolor
   self.hub = hub
   return, 1
 end
@@ -79,6 +81,7 @@ end
 pro cloudviz_client__define
   data = {cloudviz_client, $
           hub:obj_new(), $
-          widget_base:0L $
+          widget_base:0L, $
+          ncolor:0 $
          }
 end

@@ -23,9 +23,9 @@ function dendrocpp2idl, file, levels = levels
   ci = lindgen(n_elements((*cv).value))
   sz = size(im)
   ind = lindgen(n_elements(im))
-  x = ind mod sz[1]
-  y = (ind / sz[1]) mod sz[2]
-  v = (sz[0] eq 3) ? (ind / (sz[1] * sz[2])) : ind*0
+  xx = ind mod sz[1]
+  yy = (ind / sz[1]) mod sz[2]
+  zz = (sz[0] eq 3) ? (ind / (sz[1] * sz[2])) : ind*0
   order = sort((*cv).xlocation[0:nseed-1])
   if n_elements(levels) eq 0 then begin
      levels = (*cv).height
@@ -52,13 +52,13 @@ function dendrocpp2idl, file, levels = levels
      endfor
   endfor
 
-  ;- newmerger's rows and columns are 
+  ;- newmerger's rows and columns are
   ;- transposed so that kernel[order[i]] maps to row/column i
   newmerger = merger
   indices, newmerger, x, y
   newmerger = newmerger[rebin(order, nseed, nseed), y]
   newmerger = newmerger[x, rebin(1#order, nseed, nseed)]
-    
+
   v = (*cv).value
   l = (*cv).cluster_label
   if doflat then begin
@@ -75,7 +75,7 @@ function dendrocpp2idl, file, levels = levels
        xlocation: (*cv).xlocation, $
        height: (*cv).height, $
        cubeindex: ci, $
-       x:x, y:y, v:v, $
+       x:xx, y:yy, v:zz, $
        szdata: sz, $
        sz: sz, $
        seeds: seeds, $

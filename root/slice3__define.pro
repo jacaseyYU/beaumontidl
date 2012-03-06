@@ -3,7 +3,7 @@
 ;  slice3
 ;
 ; PURPOSE:
-;  Slice3 is a gui for interacting with 3D CNBgrImages. 
+;  Slice3 is a gui for interacting with 3D CNBgrImages.
 ;  It presents a ds9-like "sliding slice" view of a cube. The user can
 ;  adjust the greyscale, slice position, and can pan and zoom through
 ;  the data. Multiple CNBgrImages can be displayed, with transparency.
@@ -27,10 +27,10 @@
 ;  widget hierarchies. However, it _can_ pas events to other widgets
 ;  by setting the "widget listener" attribute. If this attribute
 ;  refers to a valid widget, then this GUI will pass events to that
-;  widget. The event structure has the tags: 
+;  widget. The event structure has the tags:
 ;    X, Y, Z, L_CLICK, R_CLICK, L_RELEASE, R_RELEASE
 ;  where XYZ are in data coordinates, and correspond to the location
-;  of the cursor. 
+;  of the cursor.
 ;
 ; CREATION:
 ;  see slice3::init
@@ -43,7 +43,7 @@
 ;  SLICE3::REMOVE_IMAGE  removes an image
 ;  SLICE3::ADD_IMAGE     adds an image
 ;  SLICE3::REDRAW        Re-draws graphics to screen
-;  SLICE3::ADD_GRAPHICS_ATOM: Add a new graphics item 
+;  SLICE3::ADD_GRAPHICS_ATOM: Add a new graphics item
 ;  SLICE3::REMOVE_GRAPHICS_ATOM: Remove a graphics item
 ;  SLICE3::CLEANUP       Destroy the object, free heap memory
 ;  SLICE3::INIT          Creates a new object
@@ -70,7 +70,7 @@ function slice3::event, event, draw_event = draw_event
 
   drawid = self.base
   if event.id eq self.slider then begin
-     self->update_images 
+     self->update_images
      return, 0
   endif
 
@@ -94,7 +94,7 @@ function slice3::event, event, draw_event = draw_event
 
   result = create_struct(super, 'Z', 0, $
                          name = 'SLICE3_EVENT')
-  
+
   widget_control, self.slider, get_value = index
   if self.slice eq 0 then begin
      x = index & y = result.x & z = result.y
@@ -108,12 +108,34 @@ function slice3::event, event, draw_event = draw_event
   return, result
 end
 
+pro slice3::set_label, x, y, z, _extra = extra
+  widget_control, self.slider, get_value = z
+  if ptr_valid(self.header) then begin
+        xyzadv, *self.header, x, y, z, a, d, v
+  endif else begin
+     a = x
+     d = y
+     v = z
+  endelse
+  string = string(a, d, $
+                  format='("x: ", f0.2, "  y: ", f0.2)')
+  string += string(v, format='("  z: ",e0.3)')
+
+  im = (self->get_images())[0]
+  sz = size(*im.raw_data)
+  if x gt 0 and x lt sz[1] and y gt 0 and y lt sz[2] and z gt 0 and z lt sz[3] then begin
+     inten = (*im.raw_data)[x, y, z]
+     string += string(inten, format='("   I: ", e0.2)')
+  endif
+  self->update_info, string
+end
+
 pro slice3::resize, x, y
   widget_control, self.base, update = 0
 
   b_g = widget_info(self.buttonbase, /geom)
   s_g = widget_info(self.slider, /geom)
-  
+
   pad = 3.
   xnew = x - pad
   ynew =  y - b_g.ysize - s_g.ysize - 5*pad
@@ -127,7 +149,7 @@ pro slice3::resize, x, y
      xnew = x2
      ynew = y2
   endelse
-        
+
 
   widget_control, self.buttonbase, xsize = xnew
   widget_control, self.draw, xsize = xnew, $
@@ -185,7 +207,6 @@ end
 
 function slice3::init, cube, slice = slice, $
                        _extra = extra
-
   sz = size(cube)
   isPtr = size(cube, /type) eq 10
   ndim = isPtr ? size(*cube, /n_dim) : size(cube, /n_dim)
@@ -199,7 +220,7 @@ function slice3::init, cube, slice = slice, $
      message, '2D images must set slice=2'
 
   image = obj_new('CNBgrImage', cube, slice = slice)
-  
+
   sz = image->get_2d_size()
   slice_sz = image->get_slice_size()
   self.aspectRatio = 1. * sz[1] / sz[0]

@@ -2,8 +2,8 @@ pro dendroviz_client::cleanup
   self->cloudviz_client::cleanup
 end
 
-function dendroviz_client::init, hub
-  if ~(self->cloudviz_client::init(hub)) then return, 0
+function dendroviz_client::init, hub, _extra = extra
+  if ~(self->cloudviz_client::init(hub, _extra = extra)) then return, 0
   ptr = hub->getData()
   if ~contains_tag(*ptr, 'height') || $
      ~contains_tag(*ptr, 'xlocation') then $

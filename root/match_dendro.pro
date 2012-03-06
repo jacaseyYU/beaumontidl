@@ -9,9 +9,9 @@
 ;  ppv: A dendrogram pointer for the ppv cube
 ;  vcube: The radial velocity for each pixel in the original ppp
 ;         cube. Must be the same size as the cube used to generate
-;         ppp. 
+;         ppp.
 ;  vcen: The velocity of each channel along the third axis of the PPV
-;        cube. 
+;        cube.
 ;
 ; OUTPUTS:
 ;  An array of structures, one for each PPV blob. These structures
@@ -34,7 +34,7 @@
 ;
 ; BEHAVIOR:
 ;   Definitions:
-;   PPP[i]- the ith PPP-identified structure (in PPP space) 
+;   PPP[i]- the ith PPP-identified structure (in PPP space)
 ;   PPV[j]- the jth PPV-identified structure (in PPV space)
 ;   PPP'[i] - the ith PPP-identified structure, projected into PPV
 ;   I(x) -- the integrated intensity of some region x in PPV space
@@ -54,14 +54,16 @@
 ;  March 2011: Written by Chris Beaumont
 ;-
 function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
-                       mask_matrix = mask_matrix
+                       mask_matrix = mask_matrix, translate = translate, $
+                       verbose = verbose, _extra = extra
+  debug = 0
   if n_params() ne 4 then begin
      print, 'calling sequence'
      print, 'result = match_dendro(ppp, ppv, v_cube, vcen, '
      print, '                      [matrix = matrix, mask_matrix = mask_matrix])'
      return, !values.f_nan
   endif
-  
+
   if size(ppp, /type) ne 10 || ~ptr_valid(ppp) || $
      size(*ppp, /type) ne 8 then $
         message, 'ppp does not point to a structure'
@@ -111,7 +113,7 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
   leaves = ptrarr(nst_ppv)
   for i = 0, nst_ppv - 1, 1 do $
      leaves[i] = ptr_new( leafward_mergers(i, (*ppv).clusters) )
-  
+
   ;-pre-calculate normalized intensity of each PPV struct
   ppv_norm = fltarr(nst_ppv)
   ppv_norm_flat = lonarr(nst_ppv)
@@ -125,7 +127,7 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
   for i = nst_ppp - 1, 0, -1 do begin
 
      ;- extract PPP struct
-     if (i mod 5) eq 0 then print, i, nst_ppp - 1
+     if keyword_set(verbose) && (i mod 5) eq 0 then print, i, nst_ppp - 1
      ind = substruct(i, ppp, count = ct)
      if ct lt 5 then continue
      ci = (*ppp).cubeindex[ind]
@@ -136,19 +138,28 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
      mask[ci] = (*ppp).t[ind]
      ai = array_indices(mask, ci)
      hi = max(ai, dim = 2, min = lo)
+     hi[2] = (hi[2] + 1) < (n_elements(mask[0,0,*]) - 1)
+     lo[2] = (lo[2] - 1) > 0
      ra = hi - lo + 1
      stamp = reform( mask[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]], $
                      ra[0], ra[1], ra[2])
      vstamp = reform(v_cube[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]], $
                      ra[0], ra[1], ra[2])
-     proj = cppp2ppv(stamp, vstamp, vcen)
+
+     if keyword_set(translate) then $
+        proj = call_function(stamp, vstamp, vcen, _extra = extra) $
+     else $
+        proj = cppp2ppv(stamp, vstamp, vcen, _extra = extra)
 
      ;assert, abs(total(proj) - total(stamp)) / (total(stamp) > 1d-30) lt 1e-2
-     
+     if not noassert then $
+        assert, min(proj) ge 0
+
      ;- insert cropped projection into correctly sized cube
      ppp_in_ppv[*] = 0
      assert, array_size_equal(ppp_in_ppv[lo[0]:hi[0], lo[1]:hi[1], *], proj)
      ppp_in_ppv[lo[0]:hi[0], lo[1]:hi[1], *] = proj
+
      ppp_norm = total(proj)
      assert, ppp_norm ne 0
      ;assert, abs(ppp_norm - total(stamp)) lt total(stamp) * 1d-3
@@ -176,35 +187,45 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
            overlap[pos] = hit[ri[ri[l[k]] : ri[l[k] + 1] - 1]]
            pos += dpos
         endfor
-        
+
         xx = total(double(ppp_in_ppv[overlap]))
         yy = total(double(ppv_val[overlap]))
+        if debug && j eq 1 && i eq 12 then begin
+           print, xx, ppp_norm
+           print, yy, ppv_norm[j]
+           print, n_elements(overlap)
+           save, ppp_in_ppv, file='match.sav'
+        endif
+
         sim1 = sqrt(xx / ppp_norm) * sqrt(yy / ppv_norm[j])
         sim2 = 1. * n_elements(overlap) / $
                (1. * sqrt(num_ppp) * sqrt(ppv_norm_flat[j]))
-        if sim2 gt .8 then print, n_elements(overlap), num_ppp, $
-                                  ppv_norm_flat[j]
 
-        if sim1 le 0 || sim1 ge 1.001 || $
-           sim2 le 0 || sim2 ge 1.001 then begin
+        if keyword_set(verbose) && sim2 gt .8 then print, n_elements(overlap), num_ppp, $
+           ppv_norm_flat[j]
+
+        if sim1 le 0 || sim1 ge 1.005 || $
+           sim2 le 0 || sim2 ge 1.005 then begin
            print, sim1, sim2
         endif
-        
+
         ;- these can be negative if input ppp/ppv
         ;- have neg avlues
         if not noassert then begin
-           assert, sim1 ge 0 && sim1 lt 1.001
-           assert, sim2 ge 0 && sim2 lt 1.001
+           assert, sim1 ge 0 && sim1 lt 1.005
+           assert, sim2 ge 0 && sim2 lt 1.005
         endif
-        
+
         similarity[i,j] = sim1
         similarity_mask[i,j] = sim2
 
      endfor
-     print, 'Finished with PPP struct ', i
-     print, 'Max similarity: ', max(similarity[i,*], loc1, /nan)
-     print, 'Max mask sim:   ', max(similarity_mask[i,*], loc2, /nan)
-     print, 'Indices of max: ', loc1, loc2
+     if keyword_set(verbose) then begin
+        print, 'Finished with PPP struct ', i
+        print, 'Max similarity: ', max(similarity[i,*], loc1, /nan)
+        print, 'Max mask sim:   ', max(similarity_mask[i,*], loc2, /nan)
+        print, 'Indices of max: ', loc1, loc2
+     endif
   endfor
   ptr_free, leaves
 

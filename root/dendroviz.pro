@@ -1,4 +1,5 @@
-pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match
+pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match, $
+               ncolor = ncolor, header = header
 
   if n_params() ne 1 then begin
      print, 'calling sequence'
@@ -14,6 +15,7 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match
   if size(ptr, /type) eq 7 then begin
      if ~file_test(ptr) then $
         message, 'Could not find input file: ' + ptr
+     header = headfits(ptr)
      ptr = dendrocpp2cloudviz(ptr)
   endif
 
@@ -29,7 +31,7 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match
      message, /info, 'Note: you can convert yourself using dendro2cloudviz'
      ptr = dendro2cloudviz(ptr)
   endif
-  
+
   if keyword_set(log) then (*ptr).height = alog10((*ptr).height)
   if keyword_set(match) then begin
      c_def = byte(transpose(fsc_color( $
@@ -45,8 +47,8 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match
 
   ;- create guis
   hub = obj_new('cloudviz_hub', ptr, colors = c1)
-  panel = obj_new('cloudviz_panel', hub, data = data, ppp = ppp)
-  plot = obj_new('dendroplot', hub)
+  panel = obj_new('cloudviz_panel', hub, data = data, ppp = ppp, ncolor=ncolor, header = header)
+  plot = obj_new('dendroplot', hub, ncolor=ncolor)
   listen = obj_new('dendroviz_listener', hub)
 
   hub->addClient, panel
@@ -68,7 +70,7 @@ pro dendroviz, ptr, data = data, ppp = ppp, log = log, match = match
      v1 = plot->get_view()
      v1->setProperty, color=[232, 241, 255]
   endif
-end 
+end
 
 pro test
 

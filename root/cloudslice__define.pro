@@ -3,7 +3,7 @@ function cloudslice::event, event
   if size(super, /tname) ne 'STRUCT' then return, 0
   self.hub->receiveEvent, event
   ptr = self.hub->getData()
-  
+
   self.hub->receiveEvent, super
 
   if ~self.listener_toggle->check_listen(super) then return, 0
@@ -41,7 +41,7 @@ pro cloudslice::notifyStructure, index, structure, force = force
   self.maskobj->redraw
 ;  self->update_images
   self->request_redraw
-end  
+end
 
 pro cloudslice::notifyCurrent, id
   self.listener_toggle->set_listen, 0
@@ -65,10 +65,10 @@ pro cloudslice::cleanup
 end
 
 
-function cloudslice::init, hub
-  if ~self->cloudviz_client::init(hub) then return, 0
+function cloudslice::init, hub, _extra = extra
+  if ~self->cloudviz_client::init(hub, _extra = extra) then return, 0
   ptr = hub->getData()
-
+  help, _extra, /struct
   cube = (*ptr).value
   mask = byte(cube * 0)
 
@@ -77,13 +77,13 @@ function cloudslice::init, hub
 ;     message, 'data in cloudslice hub must describe a cube'
 
   self.mask = ptr_new(mask, /no_copy)
-  colors = bytarr(3, 8)
-  for i = 0, 7, 1 do colors[*,i] = (hub->getColors(i))[0:2]
+  colors = bytarr(3, self.ncolor)
+  for i = 0, self.ncolor-1, 1 do colors[*,i] = (hub->getColors(i))[0:2]
 
-  self.maskobj = obj_new('cnbgrmask', self.mask, nmask = 8, $
+  self.maskobj = obj_new('cnbgrmask', self.mask, nmask = self.ncolor, $
                          color = colors, $
                          slice = 2, /noscale, alpha = 1, blend=[3,4])
-  if ~self->slice3::init(ptr_new(cube, /no_copy), slice = 2) then return, 0
+  if ~self->slice3::init(ptr_new(cube, /no_copy), slice = 2, _extra = extra) then return, 0
   self->add_image, self.maskobj
   self.listener_toggle = obj_new('listener_toggle')
   self.widget_base = self.base
