@@ -70,12 +70,25 @@ function refine_match, ppv, ppp, v_cube, vcen, match, $
                               ppp_cube = ppp_cube, v_cube = v_cube, vcen = vcen, smear = smear)
 
      if fb lt fa and fb lt fc then begin
-        refine = goldenmin('dendro_match_single', bracket[0], bracket[1], bracket[2], $
+        catch, theError
+        if theError ne 0 then begin
+           print, 'ERROR in golden min'
+           catch, /cancel
+           success = -1
+           fmin = min([fa, fb, fc], minind)
+           refine = bracket[minind]
+           goto, min_end
+        endif
+
+        refine = goldenmin('dendro_match_single', bracket[0], bracket[1], $
+                           bracket[2], $
                            fmin = fmin, $
                            seed = seed, ppv_index = i, ppv_dendro = ppv, $
-                           ppp_cube = ppp_cube, v_cube = v_cube, vcen = vcen, smear = smear, $
+                           ppp_cube = ppp_cube, v_cube = v_cube, vcen = vcen, $
+                           smear = smear, $
                            /verbose)
         success = 1
+        catch, /cancel
      endif else begin
         print, 'fail'
         success = 0
@@ -83,6 +96,7 @@ function refine_match, ppv, ppp, v_cube, vcen, match, $
         refine = bracket[minind]
      endelse
 
+     min_end:
      print, string(i, best, fmin * (-1), format='("Improved id ", i0.0, " from ", e0.2, " to ", e0.2)')
      result[i].id = i
      result[i].seed = seed

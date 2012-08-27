@@ -1,6 +1,6 @@
 function r, theta, n
 
-  theta0 = -20 * !dtor 
+  theta0 = -20 * !dtor
   r0 = 2.1
   p = 12.8 * !dtor
   m = 4D
@@ -10,10 +10,10 @@ function r, theta, n
   return, r
 end
 
-pro galaxymap
+pro galaxymap, x, y
   compile_opt idl2
   rsun = 7.6
-  
+
   theta = arrgen(-720, 720, 1) * !dtor
   r1 = r(theta, 1)
   r2 = r(theta, 2)
@@ -26,7 +26,6 @@ pro galaxymap
   oplot, r3 * cos(theta), r3 * sin(theta), color = fsc_color('green'), thick=thk
   oplot, r4 * cos(theta), r4 * sin(theta), color = fsc_color('yellow'), thick=thk
 
- 
   csz = 2 & ctk = 2
 
   xyouts, 2.4, 4.3, 'Scutum', /data, charsize = csz, charthick = 2, $
@@ -59,4 +58,9 @@ pro galaxymap
   oplot, x * sin(l), rsun - x * cos(l), thick = 3
   x = [1, 2, 3, 4, 5]
   oplot, x * sin(l), rsun - x * cos(l), thick = 3, psym = symcat(16), symsize = 2
-end 
+
+
+  x = r3 * cos(theta)
+  y = r3 * sin(theta)
+
+end

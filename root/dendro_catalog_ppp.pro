@@ -11,7 +11,7 @@ function dendro_catalog_ppp, file, vel, $
   endif
 
   if ~file_test(file) then $
-     message, 'Cannot find dendrogram file: ', file
+     message, 'Cannot find dendrogram file: '+ file
 
   catch, error
   if error ne 0 then begin
@@ -37,6 +37,7 @@ function dendro_catalog_ppp, file, vel, $
          flux:nan, $
          vol:nan, $
          virial:nan, $
+         area_mask:nan, $
          shoulder_height:nan, $
          vol_left:nan, $
          vol_right:nan}
@@ -49,9 +50,13 @@ function dendro_catalog_ppp, file, vel, $
      ci = (*ptr).cubeindex[ind]
 
      x = (*ptr).x[ind]
-     y = (*ptr).y[ind] 
-     v = (*ptr).v[ind] 
+     y = (*ptr).y[ind]
+     v = (*ptr).v[ind]
      t = (*ptr).t[ind]
+
+     amask_ind = long(x) + long(y) * (max(x)+1)
+     amask_ind = uniq(amask_ind, sort(amask_ind))
+     data[i].area_mask = n_elements(amask_ind)
 
      stamp = dblarr( range(x)+2, range(y)+2, range(v) + 2)
      stamp[ x- min(x), y - min(y), v - min(v) ] = t
@@ -67,7 +72,7 @@ function dendro_catalog_ppp, file, vel, $
 
      ;- find normalized principle axis for 2D projection
      ix -= mean[0] & iy -= mean[1] & iz -= mean[2]
-     
+
      ax1 = reform(paxis[*,0])
      ax1 /= sqrt( total(ax1^2) )
 
@@ -76,7 +81,7 @@ function dendro_catalog_ppp, file, vel, $
 
      ax3 = reform(paxis[*,2])
      ax3 /= sqrt( total(ax3^2) )
-     
+
      ;- project onto the major/minor axes
      p_1 = ix * ax1[0] + iy * ax1[1] + iz * ax1[2]
      p_2 = ix * ax2[0] + iy * ax2[1] + iz * ax2[2]
@@ -99,7 +104,6 @@ function dendro_catalog_ppp, file, vel, $
      uvel = total(t * vel[ci]) / tt
      sig_vel = sqrt(  total(t * (vel[ci] - uvel)^2) / tt  ) * vel_scale
      sig_r = (sig_1 * sig_2 * sig_3)^(1D/3D)
-     
      data[i].sig_maj = sig_1
      data[i].sig_min = sig_3
      data[i].sig_v = sig_vel
@@ -107,7 +111,7 @@ function dendro_catalog_ppp, file, vel, $
      data[i].flux = tt
      data[i].vol = n_elements(t)
   endfor
-  eta = 1.91 ;- correct for concentration of R. see rosolowsky 2008
+  eta = 1.91 ; correct for concentration of R. see rosolowsky 2008
   g = 6.673d-8
   data.virial = 5 * eta * data.sig_r * data.sig_v^2 / (data.flux * flux2mass * g)
 
@@ -125,6 +129,6 @@ function dendro_catalog_ppp, file, vel, $
   return, data
 
 end
-  
+
 
 

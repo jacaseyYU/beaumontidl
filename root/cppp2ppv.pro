@@ -1,8 +1,9 @@
-function cppp2ppv, ppp, vel, bincenters, smear = smear, anti = anti
-
+function cppp2ppv, ppp, vel, bincenters, smear = smear, anti = anti, $
+                   ncomp = ncomp, no_gradient = no_gradient
   if n_params() ne 3 then begin
      print, 'Calling sequence:'
-     print, 'result = ppp2ppv(ppp, vel, bincenters, [dimension = dimension, /mask])'
+     print, 'result = ppp2ppv(ppp, vel, bincenters, '
+     print, '         [smear=smear, anti=anti, /ncomp, /no_gradient])'
      return, !values.f_nan
   endif
 
@@ -11,6 +12,9 @@ function cppp2ppv, ppp, vel, bincenters, smear = smear, anti = anti
      message, 'Cannot find ppp2ppv.so'
 
   sz = size(ppp)
+  if sz[0] ne 3 then $
+     message, 'Input PPP cube must be 3-dimensional'
+
   sz = long(sz[1:3])
   nbin = long(n_elements(bincenters))
 
@@ -32,21 +36,33 @@ function cppp2ppv, ppp, vel, bincenters, smear = smear, anti = anti
   if size(_bincenters, /type) ne 4 then _bincenters = float(_bincenters)
 
   result = fltarr(sz[0], sz[1], nbin)
+  if arg_present(ncomp) then begin
+     domax = 1L
+     max = result
+  endif else begin
+     domax = 0L
+     max = [1.]
+  endelse
   junk = call_external(lib[0], 'ppp2ppv', $
                        _ppp, _vel, _bincenters, $
-                       sz, nbin, result)
-
+                       sz, nbin, domax, result, max, $
+                       long(keyword_set(no_gradient))) ;, /unload)
   if keyword_set(anti) then begin
      sz /= anti
      nbin /= anti
      ;result = congrid(result, sz[0], sz[1], nbin, cubic=-0.5)
+  endif
+  if arg_present(ncomp) then begin
+     bad = where(max eq 0, ct)
+     ncomp = result / max
+     if ct ne 0 then ncomp[bad] = 0
   endif
 
   if keyword_set(smear) then begin
      nonneg = min(result) ge 0
      dv = abs(bincenters[1] - bincenters[0])
      fwhm = smear / dv
-     npix = ceil(3 * fwhm) / 2 * 2 + 1
+     npix = (ceil(3 * fwhm) / 2 * 2 + 1) > 2
      psf = psf_gaussian(npixel = npix, fwhm = fwhm)
      ;- only central column is nonzero
      s = size(psf)
@@ -54,8 +70,10 @@ function cppp2ppv, ppp, vel, bincenters, smear = smear, anti = anti
      psf[s[1] / 2 + 1:*, *] = 0
      psf = psf[s[1]/2 - 1: s[1]/2 + 1, *]
      psf /= total(psf, /double)
+     sr = size(result)
      for i = 0, sz[0] - 1, 1 do begin
-        plane = reform(result[i, *, *])
+        if sr[2] eq 1 then continue ;-XXX hack. convolution won't work on 1-pixel strips
+        plane = reform(result[i, *, *], sr[2], sr[3])
         plane = convolve(plane, psf, ft_psf = ft_psf)
         ;stop
         result[i, *, *] = plane
