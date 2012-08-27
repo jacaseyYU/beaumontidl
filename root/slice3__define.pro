@@ -142,13 +142,13 @@ pro slice3::resize, x, y
 
   x1 = xnew & y1 = x1 * self.aspectRatio
   y2 = ynew & x2 = y2 / self.aspectRatio
-  if x1 lt y1 then begin
-     xnew = x1
-     ynew = y1
-  endif else begin
-     xnew = x2
-     ynew = y2
-  endelse
+  ;if x1 lt y1 then begin
+  ;   xnew = x1
+  ;   ynew = y1
+  ;endif else begin
+  ;   xnew = x2
+  ;   ynew = y2
+  ;endelse
 
 
   widget_control, self.buttonbase, xsize = xnew

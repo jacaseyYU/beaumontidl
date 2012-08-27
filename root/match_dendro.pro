@@ -147,7 +147,7 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
                      ra[0], ra[1], ra[2])
 
      if keyword_set(translate) then $
-        proj = call_function(stamp, vstamp, vcen, _extra = extra) $
+        proj = call_function(translate, stamp, vstamp, vcen, _extra = extra) $
      else $
         proj = cppp2ppv(stamp, vstamp, vcen, _extra = extra)
 
