@@ -78,7 +78,7 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
   nst_ppv = nst
   nan = !values.f_nan
   rec = { id:0L, match:0L, $
-          similarity:nan }
+          similarity:nan, f_ppp:nan, f_ppv:nan}
 
   sz = size(v_cube)
   if sz[0] ne 3 then $
@@ -108,6 +108,8 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
 
   similarity = replicate(!values.f_nan, nst_ppp, nst_ppv)
   similarity_mask = similarity
+  frac_ppp = similarity
+  frac_ppv = similarity
 
   ;- pre-calculate leafward mergers
   leaves = ptrarr(nst_ppv)
@@ -218,6 +220,8 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
 
         similarity[i,j] = sim1
         similarity_mask[i,j] = sim2
+        frac_ppv[i,j] = 1. * n_elements(overlap) / ppv_norm_flat[j]
+        frac_ppp[i,j] = 1. * n_elements(overlap) / num_ppp
 
      endfor
      if keyword_set(verbose) then begin
@@ -241,7 +245,8 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
   data.id = indgen(nst)
   data.match = loc
   data.similarity = best
-
+  data.f_ppp = frac_ppp[loc, data.id]
+  data.f_ppv = frac_ppv[loc, data.id]
   matrix = similarity
   mask_matrix = similarity_mask
   return, data
