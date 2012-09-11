@@ -229,6 +229,8 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
         print, 'Max similarity: ', max(similarity[i,*], loc1, /nan)
         print, 'Max mask sim:   ', max(similarity_mask[i,*], loc2, /nan)
         print, 'Indices of max: ', loc1, loc2
+        print, 'f_ppv', frac_ppv[i, loc2]
+        print, 'f_ppp', frac_ppp[i, loc2]
      endif
   endfor
   ptr_free, leaves
