@@ -55,7 +55,7 @@
 ;-
 function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
                        mask_matrix = mask_matrix, translate = translate, $
-                       verbose = verbose, _extra = extra
+                       verbose = verbose, notrans = notrans, _extra = extra
   debug = 0
   if n_params() ne 4 then begin
      print, 'calling sequence'
@@ -148,7 +148,10 @@ function match_dendro, ppp, ppv, v_cube, vcen, matrix = matrix, $
      vstamp = reform(v_cube[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]], $
                      ra[0], ra[1], ra[2])
 
-     if keyword_set(translate) then $
+     if keyword_set(notrans) then begin
+        proj = reform( mask[lo[0]:hi[0], lo[1]:hi[1], *], $
+                       ra[0], ra[1], n_elements(ppp_in_ppv[0,0,*]))
+     endif else if keyword_set(translate) then $
         proj = call_function(translate, stamp, vstamp, vcen, _extra = extra) $
      else $
         proj = cppp2ppv(stamp, vstamp, vcen, _extra = extra)
